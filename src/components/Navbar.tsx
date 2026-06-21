@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { ArrowUpRight, Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
+import { Ticker } from "./Ticker";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 
@@ -37,78 +38,106 @@ export function Navbar() {
   const solid = scrolled || open;
 
   return (
-    <header
-      className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-colors duration-300",
-        solid
-          ? "bg-white/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/80"
-          : "bg-gradient-to-b from-black/40 to-transparent"
-      )}
-    >
-      <nav className="container flex h-16 items-center justify-between md:h-20">
-        <Link to="/" aria-label="databeings home">
-          <Logo light={!solid} />
-        </Link>
-
-        {/* desktop links */}
-        <div className="hidden items-center gap-7 md:flex">
-          {NAV_LINKS.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.to === "/"}
-              className={({ isActive }) =>
-                cn(
-                  "text-sm font-semibold transition-colors",
-                  isActive
-                    ? "text-accent-dark"
-                    : solid
-                      ? "text-ink/80 hover:text-navy"
-                      : "text-white/90 hover:text-white"
-                )
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
-          <Button asChild size="sm" className="ml-1">
-            <Link to="/contact">Get a Demo</Link>
-          </Button>
+    <header className="fixed inset-x-0 top-0 z-50">
+      {/* newsroom ticker strip — always present */}
+      <div className="relative flex h-8 items-center bg-ink text-paper">
+        <div className="flex shrink-0 items-center gap-2 border-r border-white/15 px-4 font-mono text-[0.62rem] font-bold uppercase tracking-ticker text-amber">
+          <span className="h-1.5 w-1.5 animate-blink rounded-full bg-flame" />
+          Live
         </div>
+        <Ticker className="flex-1 text-paper/80" />
+      </div>
 
-        {/* mobile toggle */}
-        <button
-          className={cn(
-            "inline-flex h-10 w-10 items-center justify-center rounded-md md:hidden",
-            solid ? "text-ink" : "text-white"
-          )}
-          aria-label="Toggle menu"
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </nav>
+      {/* main nav */}
+      <div
+        className={cn(
+          "transition-all duration-500",
+          solid
+            ? "bg-paper/90 shadow-[0_1px_0_0_#16130D14] backdrop-blur supports-[backdrop-filter]:bg-paper/75"
+            : "bg-transparent"
+        )}
+      >
+        <nav className="container flex h-16 items-center justify-between md:h-[4.5rem]">
+          <Link to="/" aria-label="databeings home" className="shrink-0">
+            <Logo light={!solid} />
+          </Link>
 
-      {/* mobile menu */}
-      {open && (
-        <div className="border-t border-border bg-white md:hidden">
-          <div className="container flex flex-col gap-1 py-4">
-            {NAV_LINKS.map((link) => (
+          {/* desktop links */}
+          <div className="hidden items-center gap-8 md:flex">
+            {NAV_LINKS.map((link, i) => (
               <NavLink
                 key={link.to}
                 to={link.to}
                 end={link.to === "/"}
                 className={({ isActive }) =>
                   cn(
-                    "rounded-md px-3 py-2.5 text-sm font-semibold",
-                    isActive ? "bg-cream text-ink" : "text-ink/80 hover:bg-muted"
+                    "group relative flex items-center gap-1.5 text-sm font-semibold tracking-tight transition-colors",
+                    isActive
+                      ? "text-flame"
+                      : solid
+                        ? "text-ink/70 hover:text-ink"
+                        : "text-white/80 hover:text-white"
                   )
                 }
               >
+                {({ isActive }) => (
+                  <>
+                    <span className="font-mono text-[0.6rem] opacity-50">
+                      0{i + 1}
+                    </span>
+                    <span className="link-underline">{link.label}</span>
+                    {isActive && (
+                      <span className="h-1 w-1 rounded-full bg-flame" />
+                    )}
+                  </>
+                )}
+              </NavLink>
+            ))}
+            <Button asChild size="sm" variant={solid ? "default" : "light"}>
+              <Link to="/contact">
+                Get a Demo
+                <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+              </Link>
+            </Button>
+          </div>
+
+          {/* mobile toggle */}
+          <button
+            className={cn(
+              "inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors md:hidden",
+              solid
+                ? "border-ink/15 text-ink"
+                : "border-white/25 text-white"
+            )}
+            aria-label="Toggle menu"
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </nav>
+      </div>
+
+      {/* mobile menu */}
+      {open && (
+        <div className="border-t border-ink/10 bg-paper md:hidden">
+          <div className="container flex flex-col py-3">
+            {NAV_LINKS.map((link, i) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.to === "/"}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 border-b border-ink/10 py-3.5 text-base font-semibold",
+                    isActive ? "text-flame" : "text-ink/80"
+                  )
+                }
+              >
+                <span className="font-mono text-xs opacity-50">0{i + 1}</span>
                 {link.label}
               </NavLink>
             ))}
-            <Button asChild size="sm" className="mt-2 w-full">
+            <Button asChild className="mt-4 w-full">
               <Link to="/contact">Get a Demo</Link>
             </Button>
           </div>

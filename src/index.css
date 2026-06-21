@@ -8,21 +8,140 @@
   }
   html {
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-paper text-ink font-sans antialiased;
     font-feature-settings: "cv11", "ss01";
+    /* faint newsprint grain so flat fills never read as a template */
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      rgba(22, 19, 13, 0.05) 1px,
+      transparent 0
+    );
+    background-size: 4px 4px;
   }
-  h1, h2, h3, h4 {
-    @apply font-serif;
+  ::selection {
+    background: #e8772e;
+    color: #fff;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
   }
 }
 
 @layer components {
   .section {
-    @apply py-16 md:py-24;
+    @apply py-20 md:py-28;
   }
+
+  /* shared container with editorial max width */
+  .container-rule {
+    @apply border-x border-dashed border-ink/15;
+  }
+
+  /* monospace label used for eyebrows / data captions */
+  .eyebrow {
+    @apply font-mono text-[0.7rem] font-bold uppercase tracking-ticker text-flame-dark;
+  }
+  .eyebrow-light {
+    @apply font-mono text-[0.7rem] font-bold uppercase tracking-ticker text-amber;
+  }
+
+  /* big editorial headline */
   .display-heading {
-    @apply font-serif font-bold tracking-tight text-ink;
+    @apply font-display font-bold tracking-tight text-ink;
+  }
+  .serif-accent {
+    @apply font-serif italic font-medium;
+  }
+
+  /* link with animated underline */
+  .link-underline {
+    @apply relative inline-block;
+  }
+  .link-underline::after {
+    content: "";
+    @apply absolute -bottom-0.5 left-0 h-px w-full origin-right scale-x-0 bg-current transition-transform duration-300;
+  }
+  .link-underline:hover::after {
+    @apply origin-left scale-x-100;
+  }
+
+  /* grain overlay for dark sections */
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.4;
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      rgba(255, 255, 255, 0.06) 1px,
+      transparent 0
+    );
+    background-size: 4px 4px;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* scroll-reveal: hidden until .is-visible is toggled by IntersectionObserver */
+  .reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition:
+      opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+    will-change: opacity, transform;
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* edge-fade mask for marquees */
+  .mask-x {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 8%,
+      #000 92%,
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 8%,
+      #000 92%,
+      transparent
+    );
+  }
+
+  .pause-on-hover:hover * {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

@@ -4,24 +4,28 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "group/btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-display text-sm font-semibold tracking-tight transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         default:
-          "bg-accent text-ink hover:bg-accent-dark shadow-sm",
+          "bg-ink text-paper shadow-editorial hover:bg-flame hover:text-white hover:-translate-y-0.5",
+        flame:
+          "bg-flame text-white shadow-editorial hover:bg-flame-dark hover:-translate-y-0.5",
         outline:
-          "border border-ink/30 bg-transparent text-ink hover:bg-ink/5",
+          "border border-ink/25 bg-transparent text-ink hover:border-ink hover:bg-ink hover:text-paper",
         outlineGold:
-          "border border-accent-dark bg-transparent text-ink hover:bg-accent/20",
-        ghost: "hover:bg-ink/5 text-ink",
-        navy: "bg-navy text-white hover:bg-navy/90 shadow-sm",
-        link: "text-navy underline-offset-4 hover:underline",
+          "border border-flame/60 bg-transparent text-ink hover:bg-flame hover:text-white hover:border-flame",
+        light:
+          "bg-paper text-ink shadow-editorial hover:bg-white hover:-translate-y-0.5",
+        ghost: "text-ink hover:bg-ink/5",
+        navy: "bg-navy text-white hover:bg-navy-light shadow-sm",
+        link: "text-ink underline-offset-4 hover:underline rounded-none",
       },
       size: {
         default: "h-11 px-6 py-2",
-        sm: "h-9 px-4",
-        lg: "h-12 px-8 text-base",
+        sm: "h-9 px-5",
+        lg: "h-[3.25rem] px-8 py-3.5 text-base",
         icon: "h-10 w-10",
       },
     },
