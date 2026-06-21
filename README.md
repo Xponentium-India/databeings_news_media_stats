@@ -45,4 +45,31 @@ src/
 
 Original design references are kept in `design-reference/`.
 
+## Admin panel (`/admin`)
+
+A separate **Node + Express + PostgreSQL** backend (in [`server/`](./server)) adds:
+
+- **Google login** with **40-minute sessions** (httpOnly cookie, hard cap)
+- **Login-count tracking** per admin
+- **Image uploads** — admins upload report images shown on the public
+  News Media Stats page
+
+Routes: `/admin/login` (sign in) and `/admin` (dashboard, protected).
+
+### Run locally (two terminals)
+
+```bash
+# 1) backend — see server/README.md for full setup
+cd server && npm install && cp .env.example .env
+createdb databeings && npm run db:setup
+npm run dev                       # http://localhost:4000
+
+# 2) frontend
+npm run dev                       # http://localhost:5173  → open /admin
+```
+
+Copy `.env.example` → `.env.local` for the frontend (`VITE_GOOGLE_CLIENT_ID`,
+`VITE_API_BASE`). Full backend + Google OAuth + deployment guide:
+[`server/README.md`](./server/README.md).
+
 # databeings_news_media_stats

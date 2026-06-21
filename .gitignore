@@ -2,6 +2,12 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
+!.env.example
+server/node_modules
+server/uploads/*
+!server/uploads/.gitkeep
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
