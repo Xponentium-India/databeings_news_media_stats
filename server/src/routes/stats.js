@@ -1,27 +1,14 @@
 import { Router } from "express";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import multer from "multer";
 import { query } from "../db.js";
-import { requireAdmin } from "../auth.js";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const UPLOAD_DIR = path.resolve(__dirname, "../../uploads");
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+import { requireUser } from "../auth.js";
+import { saveImage, deleteImage } from "../storage.js";
 
 const PERIODS = new Set(["Weekly", "Monthly"]);
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const safe = file.originalname.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
-    cb(null, `${Date.now()}-${safe}`);
-  },
-});
-
+// keep the file in memory so the storage layer can send it to disk OR S3/R2
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
   fileFilter: (_req, file, cb) => {
     if (/^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)) cb(null, true);
@@ -47,7 +34,7 @@ statsRouter.get("/", async (req, res) => {
 
   const { rows } = await query(
     `select id, language, period, year, month_or_week, image_path, created_at
-       from stat_image
+       from databeing_stat_images
        ${where.length ? "where " + where.join(" and ") : ""}
        order by year desc, created_at desc`,
     params
@@ -55,33 +42,32 @@ statsRouter.get("/", async (req, res) => {
   res.json({ items: rows.map(serialize) });
 });
 
-/** POST /api/admin/stats — upload an image + metadata (admin only). */
-statsRouter.post("/", requireAdmin, upload.single("image"), async (req, res) => {
+/** POST /api/admin/stats — upload an image + metadata (any signed-in user). */
+statsRouter.post("/", requireUser, upload.single("image"), async (req, res, next) => {
   try {
     const { language, period, year, month_or_week } = req.body || {};
     if (!language || !period || !year || !month_or_week || !req.file) {
-      cleanup(req.file);
       return res
         .status(400)
         .json({ error: "language, period, year, month_or_week and image are required" });
     }
     if (!PERIODS.has(period)) {
-      cleanup(req.file);
       return res.status(400).json({ error: "period must be Weekly or Monthly" });
     }
 
-    const imagePath = `/uploads/${req.file.filename}`;
+    // upload to storage first — DB stores only the returned link
+    const imagePath = await saveImage(req.file);
 
-    // Upsert on the unique slot; if replacing, delete the old file afterward.
     const existing = await query(
-      `select image_path from stat_image
+      `select image_path from databeing_stat_images
         where language=$1 and period=$2 and year=$3 and month_or_week=$4`,
       [language, period, Number(year), month_or_week]
     );
 
     const { rows } = await query(
-      `insert into stat_image (language, period, year, month_or_week, image_path, uploaded_by)
-         values ($1,$2,$3,$4,$5,$6)
+      `insert into databeing_stat_images
+         (language, period, year, month_or_week, image_path, uploaded_by)
+       values ($1,$2,$3,$4,$5,$6)
        on conflict (language, period, year, month_or_week) do update
          set image_path = excluded.image_path,
              uploaded_by = excluded.uploaded_by,
@@ -91,24 +77,22 @@ statsRouter.post("/", requireAdmin, upload.single("image"), async (req, res) => 
     );
 
     const oldPath = existing.rows[0]?.image_path;
-    if (oldPath && oldPath !== imagePath) removeUpload(oldPath);
+    if (oldPath && oldPath !== imagePath) deleteImage(oldPath);
 
     res.status(201).json({ item: serialize(rows[0]) });
   } catch (err) {
-    cleanup(req.file);
-    console.error("[stats POST]", err.message);
-    res.status(500).json({ error: "Upload failed" });
+    next(err);
   }
 });
 
-/** DELETE /api/admin/stats/:id (admin only). */
-statsRouter.delete("/:id", requireAdmin, async (req, res) => {
+/** DELETE /api/admin/stats/:id (any signed-in user). */
+statsRouter.delete("/:id", requireUser, async (req, res) => {
   const { rows } = await query(
-    `delete from stat_image where id = $1 returning image_path`,
+    `delete from databeing_stat_images where id = $1 returning image_path`,
     [req.params.id]
   );
   if (!rows.length) return res.status(404).json({ error: "Not found" });
-  removeUpload(rows[0].image_path);
+  deleteImage(rows[0].image_path);
   res.json({ ok: true });
 });
 
@@ -122,15 +106,4 @@ function serialize(r) {
     imagePath: r.image_path,
     createdAt: r.created_at,
   };
-}
-
-function removeUpload(imagePath) {
-  if (!imagePath?.startsWith("/uploads/")) return;
-  fs.promises
-    .unlink(path.join(UPLOAD_DIR, path.basename(imagePath)))
-    .catch(() => {});
-}
-
-function cleanup(file) {
-  if (file?.path) fs.promises.unlink(file.path).catch(() => {});
 }

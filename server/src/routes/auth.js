@@ -6,7 +6,8 @@ import {
   clearSession,
   readSession,
 } from "../auth.js";
-import { upsertUserOnLogin, recordLoginEvent, getUserById } from "../users.js";
+import { upsertUserOnLogin, getUserById } from "../users.js";
+import { createSessionRecord, getActiveSession, revokeSession } from "../sessions.js";
 
 export const authRouter = Router();
 
@@ -15,7 +16,13 @@ const clientIp = (req) =>
     .replace("::ffff:", "")
     .trim() || null;
 
-/** POST /api/auth/google { credential } — real Google sign-in. */
+async function startSession(req, res, user) {
+  const { jti, expiresAt } = issueSession(res, user);
+  await createSessionRecord(user.id, jti, expiresAt, clientIp(req), req.headers["user-agent"]);
+  return expiresAt;
+}
+
+/** POST /api/auth/google { credential } — open Google sign-in (any account). */
 authRouter.post("/google", async (req, res) => {
   try {
     const { credential } = req.body || {};
@@ -23,20 +30,12 @@ authRouter.post("/google", async (req, res) => {
 
     const profile = await verifyGoogleCredential(credential);
     const user = await upsertUserOnLogin(profile);
-
-    if (!user.is_admin) {
-      return res
-        .status(403)
-        .json({ error: "This Google account is not an authorized admin." });
-    }
-
-    const expiresAt = issueSession(res, user);
-    await recordLoginEvent(user.id, expiresAt, clientIp(req), req.headers["user-agent"]);
+    const expiresAt = await startSession(req, res, user);
 
     res.json({ user: publicUser(user), expiresAt });
   } catch (err) {
     console.error("[auth/google]", err.message);
-    res.status(401).json({ error: "Google sign-in failed" });
+    res.status(err.status || 401).json({ error: err.message || "Google sign-in failed" });
   }
 });
 
@@ -45,26 +44,18 @@ authRouter.post("/google", async (req, res) => {
  * real Google credentials. Disabled unless ALLOW_DEV_LOGIN=true and not prod.
  */
 authRouter.post("/dev-login", async (req, res) => {
-  if (!config.allowDevLogin) {
-    return res.status(404).json({ error: "Not found" });
-  }
+  if (!config.allowDevLogin) return res.status(404).json({ error: "Not found" });
   try {
-    const email = (req.body?.email || config.adminEmails[0] || "").trim();
+    const email = (req.body?.email || "dev@example.com").trim();
     if (!email) return res.status(400).json({ error: "Provide an email" });
 
     const user = await upsertUserOnLogin({
-      sub: null,
+      sub: `dev:${email.toLowerCase()}`, // stable id so dev logins don't duplicate
       email,
       name: email.split("@")[0],
       picture: null,
     });
-    if (!user.is_admin) {
-      return res
-        .status(403)
-        .json({ error: `${email} is not in ADMIN_EMAILS` });
-    }
-    const expiresAt = issueSession(res, user);
-    await recordLoginEvent(user.id, expiresAt, clientIp(req), req.headers["user-agent"]);
+    const expiresAt = await startSession(req, res, user);
     res.json({ user: publicUser(user), expiresAt, dev: true });
   } catch (err) {
     console.error("[auth/dev-login]", err.message);
@@ -76,17 +67,20 @@ authRouter.post("/dev-login", async (req, res) => {
 authRouter.get("/me", async (req, res) => {
   const session = readSession(req);
   if (!session) return res.json({ user: null });
+  const active = await getActiveSession(session.jti);
+  if (!active) return res.json({ user: null });
   const user = await getUserById(session.uid);
-  if (!user || !user.is_admin) return res.json({ user: null });
+  if (!user) return res.json({ user: null });
   res.json({
     user: publicUser(user),
-    // exp is in seconds; surface it so the client can show a countdown
     expiresAt: new Date(session.exp * 1000).toISOString(),
   });
 });
 
-/** POST /api/auth/logout */
-authRouter.post("/logout", (req, res) => {
+/** POST /api/auth/logout — revoke this session server-side + clear cookie. */
+authRouter.post("/logout", async (req, res) => {
+  const session = readSession(req);
+  if (session?.jti) await revokeSession(session.jti);
   clearSession(res);
   res.json({ ok: true });
 });
@@ -97,7 +91,6 @@ function publicUser(u) {
     email: u.email,
     name: u.name,
     pictureUrl: u.picture_url,
-    isAdmin: u.is_admin,
     loginCount: u.login_count,
     lastLoginAt: u.last_login_at,
   };

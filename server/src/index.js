@@ -3,7 +3,8 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { config } from "./config.js";
 import { authRouter } from "./routes/auth.js";
-import { statsRouter, UPLOAD_DIR } from "./routes/stats.js";
+import { statsRouter } from "./routes/stats.js";
+import { UPLOAD_DIR } from "./storage.js";
 
 const app = express();
 

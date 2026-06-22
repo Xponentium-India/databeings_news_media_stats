@@ -2,10 +2,13 @@
 
 Custom **Node + Express + PostgreSQL** API powering the `/admin` panel:
 
-- **Google login** (Google Identity Services → ID token verified server-side)
-- **40-minute sessions** — signed, httpOnly cookie with a hard 40-min expiry (never refreshed)
-- **Login-count tracking** — `app_user.login_count` increments on every sign-in; every login is also recorded in `login_event`
-- **Image uploads** — admin uploads report images (Multer → `server/uploads/`), surfaced on the public News Media Stats page
+- **Open Google login** (Google Identity Services → ID token verified server-side). Any
+  Google account may sign in; set `ALLOWED_EMAIL_DOMAIN` to restrict to one workspace.
+- **40-minute sessions** — signed httpOnly cookie + a `databeing_sessions` row; logout
+  revokes the session server-side. Hard 40-min cap, never refreshed.
+- **Per-account tracking** — `databeing_users.login_count` increments on every sign-in.
+- **Image uploads** — file goes to storage (local disk **or** S3/Cloudflare R2); the DB
+  stores **only the link** in `databeing_stat_images.image_path`.
 
 This is a **separate app** from the React frontend and deploys to its own host.
 
@@ -31,9 +34,10 @@ Key `.env` values:
 | `GOOGLE_CLIENT_ID` | OAuth Web client ID (must match frontend `VITE_GOOGLE_CLIENT_ID`) |
 | `JWT_SECRET` | random string — `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
 | `SESSION_MINUTES` | session cap (≤ 40) |
-| `ADMIN_EMAILS` | comma-separated emails allowed into `/admin` |
+| `ALLOWED_EMAIL_DOMAIN` | empty = any Google account; set (e.g. `xponentium.com`) to restrict |
+| `STORAGE_DRIVER` | `local` (server disk) or `s3` (AWS S3 / Cloudflare R2) |
 | `ALLOW_DEV_LOGIN` | `true` only for local testing (skips Google). **Never `true` in prod.** |
-| `NODE_ENV` | `production` when deployed (enables Secure cookies, disables dev-login) |
+| `NODE_ENV` | `production` when deployed (Secure + SameSite=None cookies, no dev-login) |
 
 ## 3. Create the database + tables
 
@@ -64,9 +68,10 @@ Vite proxies `/api` and `/uploads` to `:4000`, so cookies are same-origin.
 5. Copy the **Client ID** into:
    - `server/.env` → `GOOGLE_CLIENT_ID`
    - frontend `.env.local` → `VITE_GOOGLE_CLIENT_ID`
-6. Put the admin's Google email in `server/.env` → `ADMIN_EMAILS`.
 
-> The Google button uses ID-token sign-in (no redirect URI / client secret needed).
+> Login is open to any Google account by default. To limit it to your workspace,
+> set `ALLOWED_EMAIL_DOMAIN=xponentium.com`. The Google button uses ID-token sign-in
+> (no redirect URI / client secret needed).
 
 ---
 
@@ -84,6 +89,33 @@ Vite proxies `/api` and `/uploads` to `:4000`, so cookies are same-origin.
 | `DELETE` | `/api/admin/stats/:id` | admin | delete a report image |
 
 ---
+
+## Image storage — Cloudflare R2 (recommended)
+
+The DB only ever stores a **link**; the file goes to storage. In dev it's local disk;
+in production point it at your R2 bucket (S3-compatible — no code change):
+
+1. **R2 → create a bucket** (e.g. `assets`, which you already have).
+2. **R2 → Manage R2 API Tokens → Create** an Object **Read & Write** token. Note the
+   Access Key ID + Secret.
+3. **Make objects publicly readable** so `<img>` can load them: in the bucket's
+   **Settings**, either enable the **r2.dev public URL** or (better, since the site is
+   on Cloudflare) attach a **custom domain** like `cdn.thedatabeings.com`.
+4. Set these env vars on the backend:
+
+   ```
+   STORAGE_DRIVER=s3
+   S3_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+   S3_REGION=auto
+   S3_BUCKET=assets
+   S3_ACCESS_KEY_ID=<r2 access key id>
+   S3_SECRET_ACCESS_KEY=<r2 secret>
+   S3_PUBLIC_BASE=https://cdn.thedatabeings.com   # the PUBLIC url from step 3
+   ```
+
+> `S3_ENDPOINT` is the **private** S3 API (used to upload). `S3_PUBLIC_BASE` is the
+> **public** URL stored in the DB and shown to visitors — they must be different.
+> Find your Account ID + S3 API endpoint under **R2 → Account Details**.
 
 ## Deploying
 

@@ -10,7 +10,6 @@ export interface AdminUser {
   email: string;
   name: string | null;
   pictureUrl: string | null;
-  isAdmin: boolean;
   loginCount: number;
   lastLoginAt: string | null;
 }
@@ -25,8 +24,12 @@ export interface StatImage {
   createdAt: string;
 }
 
-/** Prefix an API/upload path with the configured base (for prod cross-origin). */
-export const assetUrl = (path: string) => `${BASE}${path}`;
+/**
+ * Resolve an image link from the API. Absolute URLs (S3/R2) are used as-is;
+ * relative paths (local /uploads/...) get the API base prefixed for prod.
+ */
+export const assetUrl = (path: string) =>
+  /^https?:\/\//.test(path) ? path : `${BASE}${path}`;
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {

@@ -74,7 +74,7 @@ export default function AdminLogin() {
             Sign in to continue
           </h1>
           <p className="mt-2 text-sm text-paper/60">
-            Authorized Google accounts only. Sessions last 40 minutes.
+            Sign in with any Google account. Sessions last 40 minutes.
           </p>
         </div>
 
