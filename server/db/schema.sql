@@ -46,3 +46,15 @@ create table if not exists databeing_stat_images (
 );
 create index if not exists databeing_stat_images_filter_idx
   on databeing_stat_images (language, period, year);
+
+-- ------------------------------------------------------------------
+-- Supabase note: if you create these tables via the Supabase SQL editor
+-- they are owned by `supabase_admin`, and the `postgres` role your backend
+-- connects as won't have write access. Run ONCE in the SQL editor to fix:
+--
+--   alter table public.databeing_users        owner to postgres;
+--   alter table public.databeing_sessions      owner to postgres;
+--   alter table public.databeing_stat_images   owner to postgres;
+--
+-- (Self-hosted Supabase on a direct port may not support SSL — set DATABASE_SSL=false.)
+-- ------------------------------------------------------------------

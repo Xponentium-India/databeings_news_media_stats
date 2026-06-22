@@ -7,6 +7,8 @@ export const config = {
   port: Number(process.env.PORT) || 4000,
   databaseUrl:
     process.env.DATABASE_URL || "postgres://localhost:5432/databeings",
+  // SSL: 'true' | 'false' | unset (auto: off for localhost, on for remote)
+  dbSsl: process.env.DATABASE_SSL,
   clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
   jwtSecret: process.env.JWT_SECRET || "dev-insecure-secret-change-me",
