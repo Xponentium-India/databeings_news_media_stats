@@ -72,4 +72,20 @@ Copy `.env.example` → `.env.local` for the frontend (`VITE_GOOGLE_CLIENT_ID`,
 `VITE_API_BASE`). Full backend + Google OAuth + deployment guide:
 [`server/README.md`](./server/README.md).
 
+## Deployment (Cloudflare Pages)
+
+The frontend is a Vite SPA, so Cloudflare must build it — it cannot serve the
+source directly. Configure the Pages project as:
+
+| Setting                  | Value           |
+| ------------------------ | --------------- |
+| Build command            | `npm run build` |
+| Build output directory   | `dist`          |
+| Root directory           | *(blank)*       |
+
+- **Client-side routing:** `public/_redirects` rewrites all paths to
+  `index.html` (`200`) so deep links like `/news-media-stats` resolve.
+- **Env vars:** set `VITE_API_BASE` (and `VITE_GOOGLE_CLIENT_ID`) as
+  **build-time** variables — Vite inlines `VITE_*` at build, not runtime.
+
 # databeings_news_media_stats
