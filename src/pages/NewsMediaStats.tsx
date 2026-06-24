@@ -1,10 +1,11 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, BarChart3, Table2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Reveal } from "@/components/Reveal";
 import { Counter } from "@/components/Counter";
 import { Select } from "@/components/ui/select";
 import { NEWS_STATS, NEWS_STATS_TOTAL, type ChannelStat } from "@/data/content";
+import { api, assetUrl, type StatImage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const LANGS = ["English", "Hindi"];
@@ -37,6 +38,23 @@ export default function NewsMediaStats() {
   const [desc, setDesc] = useState(true);
 
   const tableTitle = `${lang} News YouTube ${period} Stats — ${MONTH_LONG[month]}, 2024`;
+
+  // admin-uploaded report image for the current selection (if any)
+  const [report, setReport] = useState<StatImage | null>(null);
+  useEffect(() => {
+    let active = true;
+    api
+      .listStats({ language: lang, period, month_or_week: month })
+      .then(({ items }) => {
+        if (active) setReport(items[0] ?? null);
+      })
+      .catch(() => {
+        if (active) setReport(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [lang, period, month]);
 
   const sorted = useMemo(() => {
     const get = (r: ChannelStat) =>
@@ -174,6 +192,37 @@ export default function NewsMediaStats() {
               ))}
             </div>
           </Reveal>
+
+          {/* admin-uploaded official report image for this selection */}
+          {report && (
+            <Reveal
+              delay={60}
+              className="mt-6 overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-editorial"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 bg-paper-2/60 px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-flame" />
+                  <p className="eyebrow">Official report · {report.monthOrWeek} {report.year}</p>
+                </div>
+                <a
+                  href={assetUrl(report.imagePath)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono text-[0.65rem] font-bold uppercase tracking-wider text-flame-dark link-underline"
+                >
+                  Open full size
+                </a>
+              </div>
+              <div className="bg-paper-2/30 p-4 sm:p-6">
+                <img
+                  src={assetUrl(report.imagePath)}
+                  alt={`${report.language} ${report.period} report — ${report.monthOrWeek} ${report.year}`}
+                  className="mx-auto max-h-[640px] w-auto rounded-lg border border-ink/10 bg-white object-contain shadow-sm"
+                  loading="lazy"
+                />
+              </div>
+            </Reveal>
+          )}
 
           {/* report card */}
           <Reveal delay={80} className="mt-6 overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-editorial">
