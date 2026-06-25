@@ -3,18 +3,24 @@
 -- Apply:  psql "$DATABASE_URL" -f server/db/schema.sql   (or: npm run db:setup)
 
 -- 1. Users — one row per Google account. Open login: ANY Google account is
---    tracked here on first sign-in. login_count tracks how many times they log in.
+--    tracked here on first sign-in. Only is_admin=true may use the admin panel.
 create table if not exists databeing_users (
   id             bigint generated always as identity primary key,
   google_sub     text not null unique,            -- Google's stable account id ("sub")
   email          text not null,
   name           text,
   picture_url    text,
+  is_admin       boolean not null default false,  -- gate: only true may access /admin
   login_count    integer not null default 0,      -- how many times this account logged in
   first_login_at timestamptz,
   last_login_at  timestamptz,
   created_at     timestamptz not null default now()
 );
+
+-- Existing DB? add the column:
+--   alter table databeing_users add column if not exists is_admin boolean not null default false;
+-- Grant admin access to an account (after they have logged in once):
+--   update databeing_users set is_admin = true where email = 'you@xponentium.com';
 
 -- 2. Sessions — one row per login/session. Drives the 40-minute window and lets
 --    logout revoke a session server-side. jti = the session id stored in the cookie.

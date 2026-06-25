@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { query } from "../db.js";
-import { requireUser } from "../auth.js";
+import { requireAdmin } from "../auth.js";
 import { saveImage, deleteImage } from "../storage.js";
 
 const PERIODS = new Set(["Weekly", "Monthly"]);
@@ -43,7 +43,7 @@ statsRouter.get("/", async (req, res) => {
 });
 
 /** POST /api/admin/stats — upload an image + metadata (any signed-in user). */
-statsRouter.post("/", requireUser, upload.single("image"), async (req, res, next) => {
+statsRouter.post("/", requireAdmin, upload.single("image"), async (req, res, next) => {
   try {
     const { language, period, year, month_or_week } = req.body || {};
     if (!language || !period || !year || !month_or_week || !req.file) {
@@ -86,7 +86,7 @@ statsRouter.post("/", requireUser, upload.single("image"), async (req, res, next
 });
 
 /** DELETE /api/admin/stats/:id (any signed-in user). */
-statsRouter.delete("/:id", requireUser, async (req, res) => {
+statsRouter.delete("/:id", requireAdmin, async (req, res) => {
   const { rows } = await query(
     `delete from databeing_stat_images where id = $1 returning image_path`,
     [req.params.id]

@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import { config, COOKIE_NAME } from "./config.js";
 import { getActiveSession } from "./sessions.js";
+import { getUserById } from "./users.js";
 
 const googleClient = new OAuth2Client(config.googleClientId);
 
@@ -65,10 +66,10 @@ export function readSession(req) {
 }
 
 /**
- * Middleware: require a logged-in user with a still-active session.
- * (Open login — any tracked Google account; not restricted to one admin.)
+ * Middleware: require an active session belonging to an is_admin user.
+ * Re-checks is_admin in the DB each request, so revoking admin takes effect at once.
  */
-export async function requireUser(req, res, next) {
+export async function requireAdmin(req, res, next) {
   try {
     const payload = readSession(req);
     if (!payload) {
@@ -78,7 +79,12 @@ export async function requireUser(req, res, next) {
     if (!session) {
       return res.status(401).json({ error: "Session revoked or expired" });
     }
+    const user = await getUserById(payload.uid);
+    if (!user || !user.is_admin) {
+      return res.status(403).json({ error: "Not authorized for admin" });
+    }
     req.session = payload;
+    req.user = user;
     next();
   } catch (err) {
     next(err);

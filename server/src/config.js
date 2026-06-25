@@ -19,6 +19,12 @@ export const config = {
   // OPEN LOGIN: empty = any Google account may sign in. Set e.g. "xponentium.com"
   // to restrict to one workspace domain. (Optional, off by default.)
   allowedDomain: (process.env.ALLOWED_EMAIL_DOMAIN || "").toLowerCase().trim(),
+  // Emails auto-promoted to is_admin=true on login (bootstrap). Comma-separated.
+  // Admin status otherwise lives in databeing_users.is_admin (set via SQL).
+  adminEmails: (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
 
   // image storage: 'local' (server disk) or 's3' (S3-compatible: AWS S3 / Cloudflare R2)
   storage: {

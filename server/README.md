@@ -130,3 +130,5 @@ Fly.io, a VPS…) plus a Postgres database.
 
 > `server/uploads/` is local disk. On hosts with ephemeral disks, mount a persistent
 > volume for it, or switch to S3-compatible storage later.
+
+# databeings_server

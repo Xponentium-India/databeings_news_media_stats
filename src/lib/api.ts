@@ -10,6 +10,7 @@ export interface AdminUser {
   email: string;
   name: string | null;
   pictureUrl: string | null;
+  isAdmin: boolean;
   loginCount: number;
   lastLoginAt: string | null;
 }

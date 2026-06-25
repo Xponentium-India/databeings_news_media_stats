@@ -29,9 +29,16 @@ authRouter.post("/google", async (req, res) => {
     if (!credential) return res.status(400).json({ error: "Missing credential" });
 
     const profile = await verifyGoogleCredential(credential);
-    const user = await upsertUserOnLogin(profile);
-    const expiresAt = await startSession(req, res, user);
+    const user = await upsertUserOnLogin(profile); // tracks every login (count++)
 
+    if (!user.is_admin) {
+      // signed in & tracked, but not allowed into the admin panel
+      return res.status(403).json({
+        error: "This account is not authorized for admin access.",
+      });
+    }
+
+    const expiresAt = await startSession(req, res, user);
     res.json({ user: publicUser(user), expiresAt });
   } catch (err) {
     console.error("[auth/google]", err.message);
@@ -55,6 +62,11 @@ authRouter.post("/dev-login", async (req, res) => {
       name: email.split("@")[0],
       picture: null,
     });
+    if (!user.is_admin) {
+      return res.status(403).json({
+        error: `${email} is not an admin (add to ADMIN_EMAILS or set is_admin=true).`,
+      });
+    }
     const expiresAt = await startSession(req, res, user);
     res.json({ user: publicUser(user), expiresAt, dev: true });
   } catch (err) {
@@ -70,7 +82,7 @@ authRouter.get("/me", async (req, res) => {
   const active = await getActiveSession(session.jti);
   if (!active) return res.json({ user: null });
   const user = await getUserById(session.uid);
-  if (!user) return res.json({ user: null });
+  if (!user || !user.is_admin) return res.json({ user: null });
   res.json({
     user: publicUser(user),
     expiresAt: new Date(session.exp * 1000).toISOString(),
@@ -91,6 +103,7 @@ function publicUser(u) {
     email: u.email,
     name: u.name,
     pictureUrl: u.picture_url,
+    isAdmin: u.is_admin,
     loginCount: u.login_count,
     lastLoginAt: u.last_login_at,
   };
