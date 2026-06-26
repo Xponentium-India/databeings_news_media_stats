@@ -4,6 +4,8 @@ import { ArrowUpRight, Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
 import { Ticker } from "./Ticker";
 import { Button } from "./ui/button";
+import { ProfileMenu, openLoginGate } from "./ProfileMenu";
+import { useAuth } from "@/auth/AuthProvider";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -18,6 +20,7 @@ const HERO_ROUTES = new Set(["/", "/services", "/contact"]);
 
 export function Navbar() {
   const { pathname } = useLocation();
+  const { user, logout } = useAuth();
   const overHero = HERO_ROUTES.has(pathname);
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -99,6 +102,7 @@ export function Navbar() {
                 <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
               </Link>
             </Button>
+            <ProfileMenu solid={solid} />
           </div>
 
           {/* mobile toggle */}
@@ -140,6 +144,48 @@ export function Navbar() {
             <Button asChild className="mt-4 w-full">
               <Link to="/contact">Get a Demo</Link>
             </Button>
+
+            {user ? (
+              <div className="mt-4 flex items-center justify-between rounded-xl border border-ink/10 px-3 py-2.5">
+                <div className="flex min-w-0 items-center gap-3">
+                  {user.pictureUrl ? (
+                    <img
+                      src={user.pictureUrl}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      className="h-9 w-9 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-flame/15 text-sm font-bold text-flame">
+                      {(user.name || user.email || "?").trim().charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-ink">
+                      {user.name || "Signed in"}
+                    </span>
+                    <span className="block truncate text-xs text-ink/55">
+                      {user.email}
+                    </span>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-flame hover:bg-flame/10"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                className="mt-2 w-full"
+                onClick={openLoginGate}
+              >
+                Sign in
+              </Button>
+            )}
           </div>
         </div>
       )}

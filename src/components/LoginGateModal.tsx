@@ -47,6 +47,15 @@ export function LoginGateModal() {
     return () => clearTimeout(t);
   }, [loading, user, gated]);
 
+  // open on demand when the navbar profile icon asks (logged-out visitors)
+  useEffect(() => {
+    const onOpen = () => {
+      if (!user) setShow(true);
+    };
+    window.addEventListener("databeings:open-login", onOpen);
+    return () => window.removeEventListener("databeings:open-login", onOpen);
+  }, [user]);
+
   // While open: lock body scroll and swallow ESC so the modal can't be closed.
   useEffect(() => {
     if (!show) return;
