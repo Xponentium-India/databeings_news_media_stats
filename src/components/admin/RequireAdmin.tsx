@@ -13,7 +13,8 @@ export function RequireAdmin() {
     );
   }
 
-  if (!user) return <Navigate to="/admin/login" replace />;
+  // a normal (non-admin) visitor may have a session but must not reach the panel
+  if (!user?.isAdmin) return <Navigate to="/admin/login" replace />;
 
   return <Outlet />;
 }

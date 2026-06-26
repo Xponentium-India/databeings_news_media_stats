@@ -26,6 +26,10 @@ export default function AdminLogin() {
       try {
         const { user, expiresAt } = await api.googleLogin(credential);
         setSession(user, expiresAt);
+        if (!user.isAdmin) {
+          setError("This account is not authorized for admin access.");
+          return;
+        }
         navigate("/admin", { replace: true });
       } catch (e) {
         setError(e instanceof Error ? e.message : "Sign-in failed");
@@ -42,6 +46,10 @@ export default function AdminLogin() {
     try {
       const { user, expiresAt } = await api.devLogin(devEmail.trim());
       setSession(user, expiresAt);
+      if (!user.isAdmin) {
+        setError(`${devEmail.trim()} is not an admin (add to ADMIN_EMAILS or set is_admin=true).`);
+        return;
+      }
       navigate("/admin", { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Dev login failed");
@@ -50,7 +58,7 @@ export default function AdminLogin() {
     }
   };
 
-  if (!loading && user) return <Navigate to="/admin" replace />;
+  if (!loading && user?.isAdmin) return <Navigate to="/admin" replace />;
 
   return (
     <main className="grain relative flex min-h-screen items-center justify-center overflow-hidden bg-ink px-6 text-paper">
