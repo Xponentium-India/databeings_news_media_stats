@@ -10,6 +10,7 @@ import { RequireAdmin } from "@/components/admin/RequireAdmin";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import AdminLogin from "@/pages/admin/AdminLogin";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminReports from "@/pages/admin/AdminReports";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
       <Route element={<RequireAdmin />}>
         <Route element={<AdminLayout />}>
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
         </Route>
       </Route>
     </Routes>

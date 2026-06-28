@@ -5,12 +5,13 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { ImagePlus, Loader2, LogIn, Trash2, UploadCloud } from "lucide-react";
+import { ImagePlus, Loader2, LogIn, Trash2, UploadCloud, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useAuth } from "@/auth/AuthProvider";
 import { api, assetUrl, type StatImage } from "@/lib/api";
+import { Link } from "react-router-dom";
 
 const LANGUAGES = ["English", "Hindi"];
 const PERIODS = ["Monthly", "Weekly"] as const;
@@ -135,7 +136,7 @@ export default function AdminDashboard() {
           className="h-fit rounded-2xl border border-ink/10 bg-white/60 p-6 shadow-editorial sm:p-7"
         >
           <h2 className="font-display text-xl font-bold tracking-tight">
-            Upload a report
+            Manage report
           </h2>
 
           {msg && (
@@ -242,9 +243,13 @@ export default function AdminDashboard() {
         {/* uploaded list */}
         <div>
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-bold tracking-tight">
+            <Link
+              to="/admin/reports"
+              className="group flex items-center gap-1.5 font-display text-xl font-bold tracking-tight text-ink hover:text-flame transition-colors"
+            >
               Uploaded reports
-            </h2>
+              <ArrowRight className="h-4 w-4 text-ink/35 transition-transform group-hover:translate-x-1 group-hover:text-flame" />
+            </Link>
             <span className="font-mono text-xs text-ink/45">
               {items.length} total
             </span>
