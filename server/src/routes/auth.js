@@ -16,13 +16,22 @@ const clientIp = (req) =>
     .replace("::ffff:", "")
     .trim() || null;
 
+/** Session length per role: admins 40 min, normal visitors 30 min. */
+const sessionMinutesFor = (user) =>
+  user.is_admin ? config.sessionMinutes : config.visitorSessionMinutes;
+
 async function startSession(req, res, user) {
-  const { jti, expiresAt } = issueSession(res, user);
+  const minutes = sessionMinutesFor(user);
+  const { jti, expiresAt } = issueSession(res, user, minutes);
   await createSessionRecord(user.id, jti, expiresAt, clientIp(req), req.headers["user-agent"]);
   return expiresAt;
 }
 
-/** POST /api/auth/google { credential } — open Google sign-in (any account). */
+/**
+ * POST /api/auth/google { credential } — open Google sign-in (any account).
+ * Every signed-in account gets a backend-tracked session: 40 min for admins,
+ * 30 min for normal visitors. The admin panel is still gated by is_admin downstream.
+ */
 authRouter.post("/google", async (req, res) => {
   try {
     const { credential } = req.body || {};
@@ -30,13 +39,6 @@ authRouter.post("/google", async (req, res) => {
 
     const profile = await verifyGoogleCredential(credential);
     const user = await upsertUserOnLogin(profile); // tracks every login (count++)
-
-    if (!user.is_admin) {
-      // signed in & tracked, but not allowed into the admin panel
-      return res.status(403).json({
-        error: "This account is not authorized for admin access.",
-      });
-    }
 
     const expiresAt = await startSession(req, res, user);
     res.json({ user: publicUser(user), expiresAt });
@@ -62,11 +64,7 @@ authRouter.post("/dev-login", async (req, res) => {
       name: email.split("@")[0],
       picture: null,
     });
-    if (!user.is_admin) {
-      return res.status(403).json({
-        error: `${email} is not an admin (add to ADMIN_EMAILS or set is_admin=true).`,
-      });
-    }
+    // any account may get a (visitor) session; admin panel access still needs is_admin
     const expiresAt = await startSession(req, res, user);
     res.json({ user: publicUser(user), expiresAt, dev: true });
   } catch (err) {
@@ -75,14 +73,14 @@ authRouter.post("/dev-login", async (req, res) => {
   }
 });
 
-/** GET /api/auth/me — current session/user, or { user: null }. */
+/** GET /api/auth/me — current session/user (admin or normal visitor), or { user: null }. */
 authRouter.get("/me", async (req, res) => {
   const session = readSession(req);
   if (!session) return res.json({ user: null });
   const active = await getActiveSession(session.jti);
   if (!active) return res.json({ user: null });
   const user = await getUserById(session.uid);
-  if (!user || !user.is_admin) return res.json({ user: null });
+  if (!user) return res.json({ user: null });
   res.json({
     user: publicUser(user),
     expiresAt: new Date(session.exp * 1000).toISOString(),

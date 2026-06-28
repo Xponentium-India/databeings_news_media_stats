@@ -41,10 +41,7 @@ export function LoginGateModal() {
     }
     if (gated) {
       setShow(true); // no grace period on gated pages
-      return;
     }
-    const t = setTimeout(() => setShow(true), 5000);
-    return () => clearTimeout(t);
   }, [loading, user, gated]);
 
   // open on demand when the navbar profile icon asks (logged-out visitors)

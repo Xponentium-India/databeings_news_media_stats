@@ -12,8 +12,13 @@ export const config = {
   clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
   jwtSecret: process.env.JWT_SECRET || "dev-insecure-secret-change-me",
-  // hard cap, never more than 40 minutes
+  // admin session — hard cap, never more than 40 minutes
   sessionMinutes: Math.min(Number(process.env.SESSION_MINUTES) || 40, 40),
+  // normal visitor session — 30 minutes (tracked in DB like admin sessions)
+  visitorSessionMinutes: Math.min(
+    Number(process.env.VISITOR_SESSION_MINUTES) || 30,
+    30
+  ),
   // dev-login is never allowed in production
   allowDevLogin: !isProd && process.env.ALLOW_DEV_LOGIN === "true",
   // OPEN LOGIN: empty = any Google account may sign in. Set e.g. "xponentium.com"

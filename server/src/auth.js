@@ -27,14 +27,15 @@ export async function verifyGoogleCredential(credential) {
 }
 
 /**
- * Issue a session cookie with a fresh jti. exp is a hard cap (sessionMinutes)
- * and is never refreshed, so a session can't outlive the cap. Returns { jti, expiresAt }.
+ * Issue a session cookie with a fresh jti. `minutes` is a hard cap (40 for admins,
+ * 30 for normal visitors) and is never refreshed, so a session can't outlive the cap.
+ * Returns { jti, expiresAt }.
  */
-export function issueSession(res, user) {
+export function issueSession(res, user, minutes = config.sessionMinutes) {
   const jti = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + config.sessionMinutes * 60_000);
+  const expiresAt = new Date(Date.now() + minutes * 60_000);
   const token = jwt.sign({ uid: String(user.id), email: user.email }, config.jwtSecret, {
-    expiresIn: `${config.sessionMinutes}m`,
+    expiresIn: `${minutes}m`,
     jwtid: jti,
   });
 
@@ -43,7 +44,7 @@ export function issueSession(res, user) {
     // cross-site cookies (frontend & API on different domains) need None+Secure
     sameSite: config.isProd ? "none" : "lax",
     secure: config.isProd,
-    maxAge: config.sessionMinutes * 60_000,
+    maxAge: minutes * 60_000,
     path: "/",
   });
 
