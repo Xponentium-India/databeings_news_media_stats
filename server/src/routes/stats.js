@@ -20,7 +20,7 @@ export const statsRouter = Router();
 
 /** GET /api/stats — public list, optional filters. */
 statsRouter.get("/", async (req, res) => {
-  const { language, period, year, month_or_week } = req.query;
+  const { language, period, year, month_or_week, report_type } = req.query;
   const where = [];
   const params = [];
   const add = (sql, val) => {
@@ -31,9 +31,10 @@ statsRouter.get("/", async (req, res) => {
   if (period) add("period =", period);
   if (year) add("year =", Number(year));
   if (month_or_week) add("month_or_week =", month_or_week);
+  if (report_type) add("report_type =", report_type);
 
   const { rows } = await query(
-    `select id, language, period, year, month_or_week, image_path, created_at
+    `select id, language, period, year, month_or_week, report_type, image_path, created_at
        from databeing_stat_images
        ${where.length ? "where " + where.join(" and ") : ""}
        order by year desc, created_at desc`,
@@ -45,7 +46,7 @@ statsRouter.get("/", async (req, res) => {
 /** POST /api/admin/stats — upload an image + metadata (any signed-in user). */
 statsRouter.post("/", requireAdmin, upload.single("image"), async (req, res, next) => {
   try {
-    const { language, period, year, month_or_week } = req.body || {};
+    const { language, period, year, month_or_week, report_type } = req.body || {};
     if (!language || !period || !year || !month_or_week || !req.file) {
       return res
         .status(400)
@@ -55,25 +56,27 @@ statsRouter.post("/", requireAdmin, upload.single("image"), async (req, res, nex
       return res.status(400).json({ error: "period must be Weekly or Monthly" });
     }
 
+    const reportTypeVal = report_type || "news_report";
+
     // upload to storage first — DB stores only the returned link
     const imagePath = await saveImage(req.file);
 
     const existing = await query(
       `select image_path from databeing_stat_images
-        where language=$1 and period=$2 and year=$3 and month_or_week=$4`,
-      [language, period, Number(year), month_or_week]
+        where language=$1 and period=$2 and year=$3 and month_or_week=$4 and report_type=$5`,
+      [language, period, Number(year), month_or_week, reportTypeVal]
     );
 
     const { rows } = await query(
       `insert into databeing_stat_images
-         (language, period, year, month_or_week, image_path, uploaded_by)
-       values ($1,$2,$3,$4,$5,$6)
-       on conflict (language, period, year, month_or_week) do update
+         (language, period, year, month_or_week, report_type, image_path, uploaded_by)
+       values ($1,$2,$3,$4,$5,$6,$7)
+       on conflict (language, period, year, month_or_week, report_type) do update
          set image_path = excluded.image_path,
              uploaded_by = excluded.uploaded_by,
              created_at = now()
        returning *`,
-      [language, period, Number(year), month_or_week, imagePath, req.session.uid]
+      [language, period, Number(year), month_or_week, reportTypeVal, imagePath, req.session.uid]
     );
 
     const oldPath = existing.rows[0]?.image_path;
@@ -103,6 +106,7 @@ function serialize(r) {
     period: r.period,
     year: r.year,
     monthOrWeek: r.month_or_week,
+    reportType: r.report_type,
     imagePath: r.image_path,
     createdAt: r.created_at,
   };

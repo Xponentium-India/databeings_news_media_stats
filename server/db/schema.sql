@@ -45,13 +45,14 @@ create table if not exists databeing_stat_images (
   period        text     not null check (period in ('Weekly','Monthly')),
   year          smallint not null,                          -- 2025
   month_or_week text     not null,                          -- 'Jan' | 'Week1'
+  report_type   text     not null default 'news_report',        -- 'news_report', 'youtube_report', etc.
   image_path    text     not null,                          -- link/URL only
   uploaded_by   bigint   references databeing_users(id) on delete set null,
   created_at    timestamptz not null default now(),
-  unique (language, period, year, month_or_week)            -- one image per slot
+  unique (language, period, year, month_or_week, report_type)      -- one image per slot+type
 );
 create index if not exists databeing_stat_images_filter_idx
-  on databeing_stat_images (language, period, year);
+  on databeing_stat_images (language, period, year, report_type);
 
 -- ------------------------------------------------------------------
 -- Supabase note: if you create these tables via the Supabase SQL editor
