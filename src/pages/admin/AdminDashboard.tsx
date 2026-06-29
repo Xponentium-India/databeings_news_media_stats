@@ -14,6 +14,7 @@ import { api, assetUrl, type StatImage } from "@/lib/api";
 import { Link } from "react-router-dom";
 
 const LANGUAGES = ["English", "Hindi"];
+const REPORT_TYPES = ["youtube_report", "instagram_report", "x_reprt", "news_re"];
 const PERIODS = ["Monthly", "Weekly"] as const;
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -26,6 +27,9 @@ export default function AdminDashboard() {
   const { user } = useAuth();
 
   const [language, setLanguage] = useState("English");
+  const [customLanguage, setCustomLanguage] = useState("");
+  const [reportType, setReportType] = useState("news_re");
+  const [customReportType, setCustomReportType] = useState("");
   const [period, setPeriod] = useState<(typeof PERIODS)[number]>("Monthly");
   const [year, setYear] = useState(String(CURRENT_YEAR));
   const [monthOrWeek, setMonthOrWeek] = useState("Jan");
@@ -71,21 +75,35 @@ export default function AdminDashboard() {
       setMsg({ kind: "err", text: "Please choose an image to upload." });
       return;
     }
+    const finalLanguage = language === "Other" ? customLanguage : language;
+    const finalReportType = reportType === "Other" ? customReportType : reportType;
+    if (!finalLanguage.trim()) {
+      setMsg({ kind: "err", text: "Please specify a language." });
+      return;
+    }
+    if (!finalReportType.trim()) {
+      setMsg({ kind: "err", text: "Please specify a report type." });
+      return;
+    }
+
     setBusy(true);
     setMsg(null);
     try {
       const form = new FormData();
-      form.append("language", language);
+      form.append("language", finalLanguage);
       form.append("period", period);
       form.append("year", year);
       form.append("month_or_week", monthOrWeek);
+      form.append("report_type", finalReportType);
       form.append("image", file);
       await api.uploadStat(form);
       setMsg({
         kind: "ok",
-        text: `Saved ${language} · ${period} · ${monthOrWeek} ${year}.`,
+        text: `Saved ${finalLanguage} · ${period} · ${monthOrWeek} ${year} · ${finalReportType}.`,
       });
       setFile(null);
+      if (language === "Other") setCustomLanguage("");
+      if (reportType === "Other") setCustomReportType("");
       await loadList();
     } catch (err) {
       setMsg({
@@ -155,10 +173,45 @@ export default function AdminDashboard() {
             <Labeled label="Language">
               <Select value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full">
                 {LANGUAGES.map((l) => (
-                  <option key={l}>{l}</option>
+                  <option key={l} value={l}>{l}</option>
                 ))}
+                <option value="Other">Other...</option>
               </Select>
             </Labeled>
+
+            <Labeled label="Report Type">
+              <Select value={reportType} onChange={(e) => setReportType(e.target.value)} className="w-full">
+                {REPORT_TYPES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+                <option value="Other">Other...</option>
+              </Select>
+            </Labeled>
+
+            {language === "Other" && (
+              <Labeled label="Custom Language">
+                <Input
+                  value={customLanguage}
+                  onChange={(e) => setCustomLanguage(e.target.value)}
+                  placeholder="e.g. Bangla, Marathi"
+                  required
+                  className="font-sans"
+                />
+              </Labeled>
+            )}
+
+            {reportType === "Other" && (
+              <Labeled label="Custom Report Type">
+                <Input
+                  value={customReportType}
+                  onChange={(e) => setCustomReportType(e.target.value)}
+                  placeholder="e.g. facebook_report"
+                  required
+                  className="font-sans"
+                />
+              </Labeled>
+            )}
+
             <Labeled label="Weekly or Monthly">
               <Select
                 value={period}
@@ -201,7 +254,7 @@ export default function AdminDashboard() {
 
           {/* file picker */}
           <div className="mt-5">
-            <span className="mb-1 block font-mono text-[0.65rem] font-bold uppercase tracking-wider text-ink/50">
+            <span className="mb-1 block font-mono text-[0.65rem] font-bold uppercase tracking-wider text-ink/55">
               Image
             </span>
             <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-ink/20 bg-paper/60 px-4 py-8 text-center transition-colors hover:border-flame">
@@ -214,7 +267,7 @@ export default function AdminDashboard() {
               ) : (
                 <>
                   <UploadCloud className="h-7 w-7 text-ink/40" />
-                  <span className="text-sm text-ink/60">
+                  <span className="text-sm text-ink/65">
                     Click to choose an image (PNG, JPG, WEBP · ≤ 8 MB)
                   </span>
                 </>
@@ -227,7 +280,7 @@ export default function AdminDashboard() {
               />
             </label>
             {file && (
-              <p className="mt-2 font-mono text-xs text-ink/50">{file.name}</p>
+              <p className="mt-2 font-mono text-xs text-ink/55">{file.name}</p>
             )}
           </div>
 
@@ -283,10 +336,20 @@ export default function AdminDashboard() {
                     />
                   </a>
                   <div className="min-w-0 flex-1">
-                    <p className="font-display text-sm font-bold tracking-tight">
-                      {it.language} · {it.period}
-                    </p>
-                    <p className="font-mono text-xs text-ink/55">
+                    <div className="flex flex-wrap items-center gap-x-1.5 font-display text-sm font-bold tracking-tight">
+                      <span>{it.language}</span>
+                      <span className="text-ink/30">·</span>
+                      <span>{it.period}</span>
+                      {it.reportType && (
+                        <>
+                          <span className="text-ink/30">·</span>
+                          <span className="rounded bg-flame/10 px-1.5 py-0.5 font-mono text-[0.6rem] font-bold text-flame-dark uppercase tracking-wide">
+                            {it.reportType}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <p className="font-mono text-xs text-ink/55 mt-0.5">
                       {it.monthOrWeek} {it.year}
                     </p>
                   </div>

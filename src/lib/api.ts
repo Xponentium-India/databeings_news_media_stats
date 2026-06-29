@@ -21,6 +21,7 @@ export interface StatImage {
   period: "Weekly" | "Monthly";
   year: number;
   monthOrWeek: string;
+  reportType?: string;
   imagePath: string;
   createdAt: string;
 }

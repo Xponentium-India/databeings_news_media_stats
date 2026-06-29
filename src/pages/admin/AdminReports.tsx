@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { api, assetUrl, type StatImage } from "@/lib/api";
 
-const LANGUAGES = ["English", "Hindi"];
+const PRESET_LANGUAGES = ["English", "Hindi"];
+const PRESET_REPORT_TYPES = ["youtube_report", "instagram_report", "x_reprt", "news_re"];
 const PERIODS = ["Monthly", "Weekly"];
 
 export default function AdminReports() {
@@ -19,6 +20,7 @@ export default function AdminReports() {
   const [langFilter, setLangFilter] = useState("All");
   const [periodFilter, setPeriodFilter] = useState("All");
   const [yearFilter, setYearFilter] = useState("All");
+  const [reportTypeFilter, setReportTypeFilter] = useState("All");
   const [sortBy, setSortBy] = useState("newest"); // "newest" | "oldest"
 
   const loadList = async () => {
@@ -48,6 +50,18 @@ export default function AdminReports() {
     }
   };
 
+  // Get unique languages dynamically from data, merged with presets
+  const languages = useMemo(() => {
+    const list = new Set([...PRESET_LANGUAGES, ...items.map((it) => it.language)]);
+    return Array.from(list).filter(Boolean).sort();
+  }, [items]);
+
+  // Get unique report types dynamically from data, merged with presets
+  const reportTypes = useMemo(() => {
+    const list = new Set([...PRESET_REPORT_TYPES, ...items.map((it) => it.reportType || "news_re")]);
+    return Array.from(list).filter(Boolean).sort();
+  }, [items]);
+
   // Get unique years dynamically from data
   const years = useMemo(() => {
     const uniqueYears = Array.from(new Set(items.map((it) => it.year)));
@@ -73,6 +87,11 @@ export default function AdminReports() {
       result = result.filter((it) => String(it.year) === yearFilter);
     }
 
+    // Report Type Filter
+    if (reportTypeFilter !== "All") {
+      result = result.filter((it) => (it.reportType || "news_re").toLowerCase() === reportTypeFilter.toLowerCase());
+    }
+
     // Text Search
     if (search.trim()) {
       const query = search.toLowerCase();
@@ -81,7 +100,8 @@ export default function AdminReports() {
           it.language.toLowerCase().includes(query) ||
           it.period.toLowerCase().includes(query) ||
           it.monthOrWeek.toLowerCase().includes(query) ||
-          String(it.year).includes(query)
+          String(it.year).includes(query) ||
+          (it.reportType && it.reportType.toLowerCase().includes(query))
       );
     }
 
@@ -93,15 +113,21 @@ export default function AdminReports() {
     });
 
     return result;
-  }, [items, langFilter, periodFilter, yearFilter, search, sortBy]);
+  }, [items, langFilter, periodFilter, yearFilter, reportTypeFilter, search, sortBy]);
 
-  const hasActiveFilters = search !== "" || langFilter !== "All" || periodFilter !== "All" || yearFilter !== "All";
+  const hasActiveFilters =
+    search !== "" ||
+    langFilter !== "All" ||
+    periodFilter !== "All" ||
+    yearFilter !== "All" ||
+    reportTypeFilter !== "All";
 
   const clearFilters = () => {
     setSearch("");
     setLangFilter("All");
     setPeriodFilter("All");
     setYearFilter("All");
+    setReportTypeFilter("All");
   };
 
   return (
@@ -146,7 +172,7 @@ export default function AdminReports() {
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
             <Input
               type="text"
-              placeholder="Search by language, period, month, or year..."
+              placeholder="Search by language, period, type, month..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 h-11 w-full border-b border-ink/15 focus-visible:border-flame font-sans"
@@ -177,9 +203,23 @@ export default function AdminReports() {
               className="h-9 text-xs"
             >
               <option value="All">All Languages</option>
-              {LANGUAGES.map((lang) => (
+              {languages.map((lang) => (
                 <option key={lang} value={lang}>
                   {lang}
+                </option>
+              ))}
+            </Select>
+
+            {/* Report Type Filter */}
+            <Select
+              value={reportTypeFilter}
+              onChange={(e) => setReportTypeFilter(e.target.value)}
+              className="h-9 text-xs"
+            >
+              <option value="All">All Types</option>
+              {reportTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
                 </option>
               ))}
             </Select>
@@ -287,10 +327,17 @@ export default function AdminReports() {
 
                 {/* Info Section */}
                 <div className="mt-4 flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="inline-block rounded-full bg-flame/10 px-2.5 py-0.5 font-mono text-[0.6rem] font-bold uppercase tracking-wider text-flame-dark">
-                      {it.language}
-                    </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="inline-block rounded-full bg-flame/10 px-2.5 py-0.5 font-mono text-[0.6rem] font-bold uppercase tracking-wider text-flame-dark">
+                        {it.language}
+                      </span>
+                      {it.reportType && (
+                        <span className="inline-block rounded-full bg-ink/5 px-2.5 py-0.5 font-mono text-[0.6rem] font-bold uppercase tracking-wider text-ink/65">
+                          {it.reportType}
+                        </span>
+                      )}
+                    </div>
                     <h3 className="mt-1.5 font-display text-sm font-bold tracking-tight text-ink">
                       {it.period}
                     </h3>

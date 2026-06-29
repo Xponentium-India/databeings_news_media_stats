@@ -25,6 +25,21 @@ function slotRank(s: string) {
 }
 const slotLabel = (s: string) => MONTH_LONG[s] ?? s;
 
+const formatReportTypeLabel = (rt: string) => {
+  switch (rt) {
+    case "youtube_report":
+      return "YouTube";
+    case "instagram_report":
+      return "Instagram";
+    case "x_reprt":
+      return "X";
+    case "news_re":
+      return "News";
+    default:
+      return rt.replace(/_report$/, "").replace(/_re$/, "").toUpperCase();
+  }
+};
+
 export default function NewsMediaStats() {
   const [items, setItems] = useState<StatImage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +66,7 @@ export default function NewsMediaStats() {
   // raw selections; resolved against what actually exists on every render so the
   // dropdowns can only ever point at a real, uploaded report.
   const [langSel, setLangSel] = useState("");
+  const [reportTypeSel, setReportTypeSel] = useState("");
   const [periodSel, setPeriodSel] = useState("");
   const [yearSel, setYearSel] = useState<number | null>(null);
   const [slotSel, setSlotSel] = useState("");
@@ -58,9 +74,27 @@ export default function NewsMediaStats() {
   const languages = useMemo(() => uniq(items.map((i) => i.language)), [items]);
   const lang = languages.includes(langSel) ? langSel : languages[0] ?? "";
 
-  const periods = useMemo(
-    () => uniq(items.filter((i) => i.language === lang).map((i) => i.period)),
+  const reportTypes = useMemo(
+    () =>
+      uniq(
+        items
+          .filter((i) => i.language === lang)
+          .map((i) => i.reportType || "news_re")
+      ),
     [items, lang]
+  );
+  const reportType = reportTypes.includes(reportTypeSel)
+    ? reportTypeSel
+    : reportTypes[0] ?? "";
+
+  const periods = useMemo(
+    () =>
+      uniq(
+        items
+          .filter((i) => i.language === lang && (i.reportType || "news_re") === reportType)
+          .map((i) => i.period)
+      ),
+    [items, lang, reportType]
   );
   const period = (periods as string[]).includes(periodSel)
     ? periodSel
@@ -70,10 +104,15 @@ export default function NewsMediaStats() {
     () =>
       uniq(
         items
-          .filter((i) => i.language === lang && i.period === period)
+          .filter(
+            (i) =>
+              i.language === lang &&
+              (i.reportType || "news_re") === reportType &&
+              i.period === period
+          )
           .map((i) => i.year)
       ).sort((a, b) => b - a),
-    [items, lang, period]
+    [items, lang, reportType, period]
   );
   const year = yearSel != null && years.includes(yearSel) ? yearSel : years[0] ?? null;
 
@@ -82,11 +121,15 @@ export default function NewsMediaStats() {
       uniq(
         items
           .filter(
-            (i) => i.language === lang && i.period === period && i.year === year
+            (i) =>
+              i.language === lang &&
+              (i.reportType || "news_re") === reportType &&
+              i.period === period &&
+              i.year === year
           )
           .map((i) => i.monthOrWeek)
       ).sort((a, b) => slotRank(b) - slotRank(a)),
-    [items, lang, period, year]
+    [items, lang, reportType, period, year]
   );
   const slot = slots.includes(slotSel) ? slotSel : slots[0] ?? "";
 
@@ -95,15 +138,16 @@ export default function NewsMediaStats() {
       items.find(
         (i) =>
           i.language === lang &&
+          (i.reportType || "news_re") === reportType &&
           i.period === period &&
           i.year === year &&
           i.monthOrWeek === slot
       ) ?? null,
-    [items, lang, period, year, slot]
+    [items, lang, reportType, period, year, slot]
   );
 
   const title = current
-    ? `${lang} News YouTube ${period} Stats — ${slotLabel(slot)} ${year}`
+    ? `${lang} News ${formatReportTypeLabel(reportType)} ${period} Stats — ${slotLabel(slot)} ${year}`
     : "";
 
   return (
@@ -165,6 +209,18 @@ export default function NewsMediaStats() {
                   >
                     {languages.map((l) => (
                       <option key={l}>{l}</option>
+                    ))}
+                  </Select>
+                </FilterField>
+                <FilterField label="Type">
+                  <Select
+                    value={reportType}
+                    onChange={(e) => setReportTypeSel(e.target.value)}
+                  >
+                    {reportTypes.map((t) => (
+                      <option key={t} value={t}>
+                        {formatReportTypeLabel(t)}
+                      </option>
                     ))}
                   </Select>
                 </FilterField>
