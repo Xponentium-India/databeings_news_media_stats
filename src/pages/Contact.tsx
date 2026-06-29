@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ArrowUpRight, Check, Mail, Twitter } from "lucide-react";
+import { ArrowUpRight, Check, Mail, Twitter, Linkedin } from "lucide-react";
 import { PageHero } from "@/components/PageHero";
 import { Reveal } from "@/components/Reveal";
 import { Button } from "@/components/ui/button";
@@ -39,15 +39,26 @@ export default function Contact() {
               <span className="font-mono text-[0.7rem] font-bold uppercase tracking-ticker text-flame-dark">
                 Social
               </span>
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Twitter"
-                className="mt-3 inline-flex h-12 w-12 items-center justify-center rounded-full border border-ink/20 text-ink transition-colors hover:border-flame hover:bg-flame hover:text-white"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
+              <div className="mt-3 flex items-center gap-3">
+                <a
+                  href="https://x.com/DataBeings"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Twitter"
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-ink/20 text-ink transition-colors hover:border-flame hover:bg-flame hover:text-white"
+                >
+                  <Twitter className="h-5 w-5" />
+                </a>
+                <a
+                  href="https://www.linkedin.com/in/data-beings-76765021b/"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="LinkedIn"
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-ink/20 text-ink transition-colors hover:border-flame hover:bg-flame hover:text-white"
+                >
+                  <Linkedin className="h-5 w-5" />
+                </a>
+              </div>
             </div>
           </Reveal>
 

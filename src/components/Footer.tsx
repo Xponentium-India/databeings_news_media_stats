@@ -56,7 +56,7 @@ export function Footer() {
             <p className="eyebrow-light">Follow</p>
             <div className="mt-5 flex items-center gap-3">
               <a
-                href="https://twitter.com"
+                href="https://x.com/DataBeings"
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Twitter"
@@ -65,7 +65,7 @@ export function Footer() {
                 <Twitter className="h-5 w-5" />
               </a>
               <a
-                href="https://linkedin.com"
+                href="https://www.linkedin.com/in/data-beings-76765021b/"
                 target="_blank"
                 rel="noreferrer"
                 aria-label="LinkedIn"
