@@ -14,7 +14,7 @@ import { api, assetUrl, type StatImage } from "@/lib/api";
 import { Link } from "react-router-dom";
 
 const LANGUAGES = ["English", "Hindi"];
-const REPORT_TYPES = ["youtube_report", "instagram_report", "x_reprt", "news_re"];
+const REPORT_TYPES = ["youtube_report", "instagram_report", "x_report", "news_report"];
 const PERIODS = ["Monthly", "Weekly"] as const;
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -28,7 +28,7 @@ export default function AdminDashboard() {
 
   const [language, setLanguage] = useState("English");
   const [customLanguage, setCustomLanguage] = useState("");
-  const [reportType, setReportType] = useState("news_re");
+  const [reportType, setReportType] = useState("news_report");
   const [customReportType, setCustomReportType] = useState("");
   const [period, setPeriod] = useState<(typeof PERIODS)[number]>("Monthly");
   const [year, setYear] = useState(String(CURRENT_YEAR));

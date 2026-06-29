@@ -7,7 +7,7 @@ import { Select } from "@/components/ui/select";
 import { api, assetUrl, type StatImage } from "@/lib/api";
 
 const PRESET_LANGUAGES = ["English", "Hindi"];
-const PRESET_REPORT_TYPES = ["youtube_report", "instagram_report", "x_reprt", "news_re"];
+const PRESET_REPORT_TYPES = ["youtube_report", "instagram_report", "x_report", "news_report"];
 const PERIODS = ["Monthly", "Weekly"];
 
 export default function AdminReports() {
@@ -58,7 +58,7 @@ export default function AdminReports() {
 
   // Get unique report types dynamically from data, merged with presets
   const reportTypes = useMemo(() => {
-    const list = new Set([...PRESET_REPORT_TYPES, ...items.map((it) => it.reportType || "news_re")]);
+    const list = new Set([...PRESET_REPORT_TYPES, ...items.map((it) => it.reportType || "news_report")]);
     return Array.from(list).filter(Boolean).sort();
   }, [items]);
 
@@ -89,7 +89,7 @@ export default function AdminReports() {
 
     // Report Type Filter
     if (reportTypeFilter !== "All") {
-      result = result.filter((it) => (it.reportType || "news_re").toLowerCase() === reportTypeFilter.toLowerCase());
+      result = result.filter((it) => (it.reportType || "news_report").toLowerCase() === reportTypeFilter.toLowerCase());
     }
 
     // Text Search
