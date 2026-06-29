@@ -5,13 +5,8 @@ import { ProjectCTA } from "@/components/ProjectCTA";
 import { SubscribeBar } from "@/components/SubscribeBar";
 import { Reveal } from "@/components/Reveal";
 import { Counter } from "@/components/Counter";
-import { StatBars } from "@/components/StatBars";
-import { IMAGES, NEWS_STATS, SERVICE_COLUMNS } from "@/data/content";
-
-const HERO_BARS = NEWS_STATS.slice(0, 6).map((s) => ({
-  label: s.channel,
-  value: s.views,
-}));
+import { IMAGES, SERVICE_COLUMNS } from "@/data/content";
+import { LiveViewsPanel } from "@/components/LiveViewsPanel";
 
 export default function Home() {
   return (
@@ -80,32 +75,8 @@ export default function Home() {
           </div>
 
           {/* live data panel */}
-          <Reveal delay={200} className="relative">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-lift backdrop-blur-sm">
-              <div className="flex items-center justify-between">
-                <p className="font-mono text-[0.65rem] font-bold uppercase tracking-ticker text-amber">
-                  Live · YouTube views
-                </p>
-                <span className="flex items-center gap-1.5 font-mono text-[0.65rem] text-paper/50">
-                  <span className="h-1.5 w-1.5 animate-blink rounded-full bg-flame" />
-                  Million / mo
-                </span>
-              </div>
-              <div className="mt-5">
-                <StatBars data={HERO_BARS} tone="dark" suffix="M" />
-              </div>
-              <p className="mt-5 border-t border-white/10 pt-4 font-mono text-[0.65rem] text-paper/40">
-                English News channels · sample of tracked feeds
-              </p>
-            </div>
-            <div className="absolute -bottom-5 -left-5 hidden rounded-xl border border-white/10 bg-ink px-5 py-3 shadow-lift sm:block">
-              <p className="font-display text-2xl font-bold text-flame">
-                <Counter value={509.2} decimals={1} suffix="M" />
-              </p>
-              <p className="font-mono text-[0.6rem] uppercase tracking-wider text-paper/50">
-                views tracked / mo
-              </p>
-            </div>
+          <Reveal delay={200} className="relative flex justify-center md:justify-end">
+            <LiveViewsPanel />
           </Reveal>
         </div>
 
