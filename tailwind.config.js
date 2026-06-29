@@ -89,6 +89,13 @@ export default {
           "0%": { transform: "rotate(0deg)" },
           "100%": { transform: "rotate(360deg)" },
         },
+        shake: {
+          "0%,100%": { transform: "translate(0,0) rotate(0deg)" },
+          "20%":      { transform: "translate(-3px, 1px) rotate(-0.4deg)" },
+          "40%":      { transform: "translate(3px, -1px) rotate(0.4deg)" },
+          "60%":      { transform: "translate(-2px, 2px) rotate(-0.2deg)" },
+          "80%":      { transform: "translate(2px, -1px) rotate(0.2deg)" },
+        },
       },
       animation: {
         "fade-up": "fade-up 0.7s cubic-bezier(0.22,1,0.36,1) both",
@@ -98,6 +105,7 @@ export default {
         float: "float 6s ease-in-out infinite",
         blink: "blink 1.4s steps(1) infinite",
         "spin-slow": "spin-slow 22s linear infinite",
+        shake: "shake 0.5s ease-in-out",
       },
     },
   },
