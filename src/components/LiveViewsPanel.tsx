@@ -75,7 +75,7 @@ function Sparkline({ history, width = 150, height = 50, id }: SparklineProps) {
   const areaPath = `${linePath} L${lastX.toFixed(2)},${height.toFixed(2)} L0,${height.toFixed(2)} Z`;
 
   const isUp   = history[history.length - 1] >= history[history.length - 2];
-  const color  = isUp ? T.gold : T.flameSoft;
+  const color  = isUp ? "#22c55e" : "#ef4444";
   const gradId = `spark-grad-${id}`;
 
   return (
@@ -180,7 +180,7 @@ export function LiveViewsPanel() {
 
               <span style={{
                 fontSize: 14,
-                color:    isUp ? T.gold : T.flameSoft,
+                color:    isUp ? "#22c55e" : "#ef4444",
                 margin:   "0 10px",
               }}>
                 {isUp ? "▲" : "▼"}

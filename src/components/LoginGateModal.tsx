@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
-import { Lock } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Lock, X } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ const GATED_PREFIXES = ["/news-media-stats"];
 export function LoginGateModal() {
   const { user, loading, setSession } = useAuth();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [show, setShow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -71,6 +72,11 @@ export function LoginGateModal() {
     };
   }, [show]);
 
+  const handleClose = useCallback(() => {
+    setShow(false);
+    navigate("/");
+  }, [navigate]);
+
   const handleGoogle = useCallback(
     async (credential: string) => {
       setBusy(true);
@@ -110,6 +116,13 @@ export function LoginGateModal() {
       aria-labelledby="login-gate-title"
     >
       <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-ink p-8 text-paper shadow-lift">
+        <button
+          onClick={handleClose}
+          aria-label="Go back to home"
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-paper/40 transition-colors hover:bg-white/10 hover:text-paper"
+        >
+          <X className="h-4 w-4" />
+        </button>
         <div className="mb-7 flex flex-col items-center text-center">
           <Logo light />
           <p className="mt-6 inline-flex items-center gap-2 font-mono text-[0.65rem] font-bold uppercase tracking-ticker text-amber">
