@@ -65,14 +65,23 @@ export default function NewsMediaStats() {
 
   // raw selections; resolved against what actually exists on every render so the
   // dropdowns can only ever point at a real, uploaded report.
+  const [langSel, setLangSel] = useState("");
   const [reportTypeSel, setReportTypeSel] = useState("");
   const [periodSel, setPeriodSel] = useState("");
   const [yearSel, setYearSel] = useState<number | null>(null);
   const [slotSel, setSlotSel] = useState("");
 
+  const languages = useMemo(() => uniq(items.map((i) => i.language)), [items]);
+  const lang = languages.includes(langSel) ? langSel : languages[0] ?? "";
+
   const reportTypes = useMemo(
-    () => uniq(items.map((i) => i.reportType || "news_re")),
-    [items]
+    () =>
+      uniq(
+        items
+          .filter((i) => i.language === lang)
+          .map((i) => i.reportType || "news_re")
+      ),
+    [items, lang]
   );
   const reportType = reportTypes.includes(reportTypeSel)
     ? reportTypeSel
@@ -82,10 +91,10 @@ export default function NewsMediaStats() {
     () =>
       uniq(
         items
-          .filter((i) => (i.reportType || "news_re") === reportType)
+          .filter((i) => i.language === lang && (i.reportType || "news_re") === reportType)
           .map((i) => i.period)
       ),
-    [items, reportType]
+    [items, lang, reportType]
   );
   const period = (periods as string[]).includes(periodSel)
     ? periodSel
@@ -97,12 +106,13 @@ export default function NewsMediaStats() {
         items
           .filter(
             (i) =>
+              i.language === lang &&
               (i.reportType || "news_re") === reportType &&
               i.period === period
           )
           .map((i) => i.year)
       ).sort((a, b) => b - a),
-    [items, reportType, period]
+    [items, lang, reportType, period]
   );
   const year = yearSel != null && years.includes(yearSel) ? yearSel : years[0] ?? null;
 
@@ -112,13 +122,14 @@ export default function NewsMediaStats() {
         items
           .filter(
             (i) =>
+              i.language === lang &&
               (i.reportType || "news_re") === reportType &&
               i.period === period &&
               i.year === year
           )
           .map((i) => i.monthOrWeek)
       ).sort((a, b) => slotRank(b) - slotRank(a)),
-    [items, reportType, period, year]
+    [items, lang, reportType, period, year]
   );
   const slot = slots.includes(slotSel) ? slotSel : slots[0] ?? "";
 
@@ -126,16 +137,17 @@ export default function NewsMediaStats() {
     () =>
       items.find(
         (i) =>
+          i.language === lang &&
           (i.reportType || "news_re") === reportType &&
           i.period === period &&
           i.year === year &&
           i.monthOrWeek === slot
       ) ?? null,
-    [items, reportType, period, year, slot]
+    [items, lang, reportType, period, year, slot]
   );
 
   const title = current
-    ? `${current.language} News ${formatReportTypeLabel(reportType)} ${period} Stats — ${slotLabel(slot)} ${year}`
+    ? `${lang} News ${formatReportTypeLabel(reportType)} ${period} Stats — ${slotLabel(slot)} ${year}`
     : "";
 
   return (
@@ -190,6 +202,16 @@ export default function NewsMediaStats() {
             <>
               {/* control bar — options come straight from the uploaded reports */}
               <Reveal className="flex flex-wrap items-center gap-3 rounded-2xl border border-ink/10 bg-white/60 p-5 shadow-editorial">
+                <FilterField label="Lang">
+                  <Select
+                    value={lang}
+                    onChange={(e) => setLangSel(e.target.value)}
+                  >
+                    {languages.map((l) => (
+                      <option key={l}>{l}</option>
+                    ))}
+                  </Select>
+                </FilterField>
                 <FilterField label="Type">
                   <Select
                     value={reportType}
