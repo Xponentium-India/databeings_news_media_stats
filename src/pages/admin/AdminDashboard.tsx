@@ -40,6 +40,15 @@ export default function AdminDashboard() {
   const [items, setItems] = useState<StatImage[]>([]);
   const [loadingList, setLoadingList] = useState(true);
 
+  // dashboard shows only the 10 newest reports; the full list lives on /admin/reports
+  const visibleItems = useMemo(
+    () =>
+      [...items]
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, 10),
+    [items]
+  );
+
   const previewUrl = useMemo(
     () => (file ? URL.createObjectURL(file) : null),
     [file]
@@ -304,7 +313,7 @@ export default function AdminDashboard() {
               <ArrowRight className="h-4 w-4 text-ink/35 transition-transform group-hover:translate-x-1 group-hover:text-flame" />
             </Link>
             <span className="font-mono text-xs text-ink/45">
-              {items.length} total
+              {items.length > 10 ? `newest 10 of ${items.length}` : `${items.length} total`}
             </span>
           </div>
 
@@ -318,7 +327,7 @@ export default function AdminDashboard() {
             </p>
           ) : (
             <ul className="mt-5 space-y-3">
-              {items.map((it) => (
+              {visibleItems.map((it) => (
                 <li
                   key={it.id}
                   className="flex items-center gap-4 rounded-xl border border-ink/10 bg-white/60 p-3 shadow-editorial"
