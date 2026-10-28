@@ -20,8 +20,15 @@ const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
-const CURRENT_YEAR = 2025;
-const YEARS = [CURRENT_YEAR + 1, CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
+const CURRENT_YEAR = new Date().getFullYear();
+// back to 2021, where the published report archive starts
+const FIRST_YEAR = 2021;
+const YEARS = Array.from(
+  { length: CURRENT_YEAR + 1 - FIRST_YEAR + 1 },
+  (_, i) => CURRENT_YEAR + 1 - i
+);
+// fixed list so every weekly upload uses the same "WeekN" spelling
+const WEEKS = Array.from({ length: 53 }, (_, i) => `Week${i + 1}`);
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -240,24 +247,15 @@ export default function AdminDashboard() {
               </Select>
             </Labeled>
             <Labeled label={period === "Monthly" ? "Month" : "Week"}>
-              {period === "Monthly" ? (
-                <Select
-                  value={monthOrWeek}
-                  onChange={(e) => setMonthOrWeek(e.target.value)}
-                  className="w-full"
-                >
-                  {MONTHS.map((m) => (
-                    <option key={m}>{m}</option>
-                  ))}
-                </Select>
-              ) : (
-                <Input
-                  value={monthOrWeek}
-                  onChange={(e) => setMonthOrWeek(e.target.value)}
-                  placeholder="Week1"
-                  required
-                />
-              )}
+              <Select
+                value={monthOrWeek}
+                onChange={(e) => setMonthOrWeek(e.target.value)}
+                className="w-full"
+              >
+                {(period === "Monthly" ? MONTHS : WEEKS).map((m) => (
+                  <option key={m}>{m}</option>
+                ))}
+              </Select>
             </Labeled>
           </div>
 

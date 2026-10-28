@@ -10,15 +10,31 @@ fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const useS3 = config.storage.driver === "s3";
 
-function makeKey(originalname) {
-  const ext = (path.extname(originalname) || ".png").toLowerCase();
+/* Image types we accept, identified by their leading bytes. */
+const IMAGE_TYPES = [
+  { mime: "image/png", ext: ".png", match: (b) => b.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")) },
+  { mime: "image/jpeg", ext: ".jpg", match: (b) => b.subarray(0, 3).equals(Buffer.from("ffd8ff", "hex")) },
+  { mime: "image/gif", ext: ".gif", match: (b) => /^GIF8[79]a$/.test(b.toString("latin1", 0, 6)) },
+  { mime: "image/webp", ext: ".webp", match: (b) => b.toString("latin1", 0, 4) === "RIFF" && b.toString("latin1", 8, 12) === "WEBP" },
+];
+
+/**
+ * Identify an upload from its content, not its client-supplied name or mimetype —
+ * otherwise an .html/.svg file sent as image/png would be served back as a page.
+ * Returns { mime, ext } or null.
+ */
+export function detectImageType(buffer) {
+  return IMAGE_TYPES.find((t) => t.match(buffer)) || null;
+}
+
+function makeKey(ext) {
   return `stats/${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`;
 }
 
 /* ---------- local disk driver ---------- */
-function saveLocal(file) {
-  const name = makeKey(file.originalname).replace("stats/", "");
-  fs.writeFileSync(path.join(UPLOAD_DIR, name), file.buffer);
+function saveLocal(buffer, type) {
+  const name = makeKey(type.ext).replace("stats/", "");
+  fs.writeFileSync(path.join(UPLOAD_DIR, name), buffer);
   const rel = `/uploads/${name}`;
   return config.storage.publicBase ? `${config.storage.publicBase}${rel}` : rel;
 }
@@ -44,17 +60,17 @@ async function s3() {
   return s3Client;
 }
 
-async function saveS3(file) {
+async function saveS3(buffer, type) {
   const { PutObjectCommand } = await import("@aws-sdk/client-s3");
   const c = config.storage.s3;
-  const key = makeKey(file.originalname);
+  const key = makeKey(type.ext);
   const client = await s3();
   await client.send(
     new PutObjectCommand({
       Bucket: c.bucket,
       Key: key,
-      Body: file.buffer,
-      ContentType: file.mimetype,
+      Body: buffer,
+      ContentType: type.mime,
     })
   );
   const base = c.publicBase || `${c.endpoint}/${c.bucket}`;
@@ -73,9 +89,12 @@ async function deleteS3(link) {
 
 /* ---------- public API: DB only ever stores the returned link ---------- */
 
-/** Save an uploaded image and return a link (URL/path) to store in the DB. */
-export async function saveImage(file) {
-  return useS3 ? saveS3(file) : saveLocal(file);
+/**
+ * Save an uploaded image and return a link (URL/path) to store in the DB.
+ * `type` comes from detectImageType(buffer).
+ */
+export async function saveImage(buffer, type) {
+  return useS3 ? saveS3(buffer, type) : saveLocal(buffer, type);
 }
 
 /** Best-effort delete of a previously stored image by its link. */

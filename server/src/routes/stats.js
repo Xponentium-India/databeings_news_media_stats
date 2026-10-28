@@ -2,9 +2,16 @@ import { Router } from "express";
 import multer from "multer";
 import { query } from "../db.js";
 import { requireAdmin } from "../auth.js";
-import { saveImage, deleteImage } from "../storage.js";
+import { saveImage, deleteImage, detectImageType } from "../storage.js";
+import { asyncRoute, httpError } from "../asyncRoute.js";
 
 const PERIODS = new Set(["Weekly", "Monthly"]);
+
+// year is a smallint and id a bigint in Postgres — anything else is rejected
+// here instead of reaching the DB as a failing query
+const isYear = (v) => /^\d{4}$/.test(String(v));
+const isId = (v) => /^\d{1,18}$/.test(String(v));
+const MAX_TEXT = 50;
 
 // keep the file in memory so the storage layer can send it to disk OR S3/R2
 const upload = multer({
@@ -12,15 +19,18 @@ const upload = multer({
   limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
   fileFilter: (_req, file, cb) => {
     if (/^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)) cb(null, true);
-    else cb(new Error("Only image files are allowed"));
+    else cb(httpError(400, "Only image files are allowed"));
   },
 });
 
 export const statsRouter = Router();
 
 /** GET /api/stats — public list, optional filters. */
-statsRouter.get("/", async (req, res) => {
+statsRouter.get("/", asyncRoute(async (req, res) => {
   const { language, period, year, month_or_week, report_type } = req.query;
+  if (year && !isYear(year)) {
+    return res.status(400).json({ error: "year must be a 4-digit number" });
+  }
   const where = [];
   const params = [];
   const add = (sql, val) => {
@@ -41,9 +51,9 @@ statsRouter.get("/", async (req, res) => {
     params
   );
   res.json({ items: rows.map(serialize) });
-});
+}));
 
-/** POST /api/admin/stats — upload an image + metadata (any signed-in user). */
+/** POST /api/admin/stats — upload an image + metadata (admins only). */
 statsRouter.post("/", requireAdmin, upload.single("image"), async (req, res, next) => {
   try {
     const { language, period, year, month_or_week, report_type } = req.body || {};
@@ -55,29 +65,44 @@ statsRouter.post("/", requireAdmin, upload.single("image"), async (req, res, nex
     if (!PERIODS.has(period)) {
       return res.status(400).json({ error: "period must be Weekly or Monthly" });
     }
-
+    if (!isYear(year)) {
+      return res.status(400).json({ error: "year must be a 4-digit number" });
+    }
     const reportTypeVal = report_type || "news_report";
+    if ([language, month_or_week, reportTypeVal].some((v) => String(v).length > MAX_TEXT)) {
+      return res.status(400).json({ error: `text fields must be ${MAX_TEXT} characters or fewer` });
+    }
+    const imageType = detectImageType(req.file.buffer);
+    if (!imageType) {
+      return res.status(400).json({ error: "File is not a PNG, JPEG, WebP or GIF image" });
+    }
 
     // upload to storage first — DB stores only the returned link
-    const imagePath = await saveImage(req.file);
+    const imagePath = await saveImage(req.file.buffer, imageType);
 
-    const existing = await query(
-      `select image_path from databeing_stat_images
-        where language=$1 and period=$2 and year=$3 and month_or_week=$4 and report_type=$5`,
-      [language, period, Number(year), month_or_week, reportTypeVal]
-    );
+    let existing, rows;
+    try {
+      existing = await query(
+        `select image_path from databeing_stat_images
+          where language=$1 and period=$2 and year=$3 and month_or_week=$4 and report_type=$5`,
+        [language, period, Number(year), month_or_week, reportTypeVal]
+      );
 
-    const { rows } = await query(
-      `insert into databeing_stat_images
-         (language, period, year, month_or_week, report_type, image_path, uploaded_by)
-       values ($1,$2,$3,$4,$5,$6,$7)
-       on conflict (language, period, year, month_or_week, report_type) do update
-         set image_path = excluded.image_path,
-             uploaded_by = excluded.uploaded_by,
-             created_at = now()
-       returning *`,
-      [language, period, Number(year), month_or_week, reportTypeVal, imagePath, req.session.uid]
-    );
+      ({ rows } = await query(
+        `insert into databeing_stat_images
+           (language, period, year, month_or_week, report_type, image_path, uploaded_by)
+         values ($1,$2,$3,$4,$5,$6,$7)
+         on conflict (language, period, year, month_or_week, report_type) do update
+           set image_path = excluded.image_path,
+               uploaded_by = excluded.uploaded_by,
+               created_at = now()
+         returning *`,
+        [language, period, Number(year), month_or_week, reportTypeVal, imagePath, req.user.id]
+      ));
+    } catch (err) {
+      deleteImage(imagePath); // don't leave an orphaned file behind
+      throw err;
+    }
 
     const oldPath = existing.rows[0]?.image_path;
     if (oldPath && oldPath !== imagePath) deleteImage(oldPath);
@@ -88,8 +113,9 @@ statsRouter.post("/", requireAdmin, upload.single("image"), async (req, res, nex
   }
 });
 
-/** DELETE /api/admin/stats/:id (any signed-in user). */
-statsRouter.delete("/:id", requireAdmin, async (req, res) => {
+/** DELETE /api/admin/stats/:id (admins only). */
+statsRouter.delete("/:id", requireAdmin, asyncRoute(async (req, res) => {
+  if (!isId(req.params.id)) return res.status(404).json({ error: "Not found" });
   const { rows } = await query(
     `delete from databeing_stat_images where id = $1 returning image_path`,
     [req.params.id]
@@ -97,7 +123,7 @@ statsRouter.delete("/:id", requireAdmin, async (req, res) => {
   if (!rows.length) return res.status(404).json({ error: "Not found" });
   deleteImage(rows[0].image_path);
   res.json({ ok: true });
-});
+}));
 
 function serialize(r) {
   return {

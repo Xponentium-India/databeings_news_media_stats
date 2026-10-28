@@ -67,25 +67,33 @@ export function readSession(req) {
 }
 
 /**
+ * Resolve the signed-in user: a valid cookie whose jti is a live DB session that
+ * belongs to the same user the token names. Returns { payload, user } or null.
+ */
+export async function getSessionUser(req) {
+  const payload = readSession(req);
+  if (!payload) return null;
+  const session = await getActiveSession(payload.jti);
+  if (!session || String(session.user_id) !== String(payload.uid)) return null;
+  const user = await getUserById(session.user_id);
+  return user ? { payload, user } : null;
+}
+
+/**
  * Middleware: require an active session belonging to an is_admin user.
  * Re-checks is_admin in the DB each request, so revoking admin takes effect at once.
  */
 export async function requireAdmin(req, res, next) {
   try {
-    const payload = readSession(req);
-    if (!payload) {
+    const current = await getSessionUser(req);
+    if (!current) {
       return res.status(401).json({ error: "Session expired or not signed in" });
     }
-    const session = await getActiveSession(payload.jti);
-    if (!session) {
-      return res.status(401).json({ error: "Session revoked or expired" });
-    }
-    const user = await getUserById(payload.uid);
-    if (!user || !user.is_admin) {
+    if (!current.user.is_admin) {
       return res.status(403).json({ error: "Not authorized for admin" });
     }
-    req.session = payload;
-    req.user = user;
+    req.session = current.payload;
+    req.user = current.user;
     next();
   } catch (err) {
     next(err);

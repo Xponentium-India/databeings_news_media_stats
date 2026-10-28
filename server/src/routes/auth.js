@@ -1,3 +1,4 @@
+import net from "node:net";
 import { Router } from "express";
 import { config } from "../config.js";
 import {
@@ -5,16 +6,20 @@ import {
   issueSession,
   clearSession,
   readSession,
+  getSessionUser,
 } from "../auth.js";
-import { upsertUserOnLogin, getUserById } from "../users.js";
-import { createSessionRecord, getActiveSession, revokeSession } from "../sessions.js";
+import { upsertUserOnLogin } from "../users.js";
+import { createSessionRecord, revokeSession } from "../sessions.js";
+import { asyncRoute } from "../asyncRoute.js";
 
 export const authRouter = Router();
 
-const clientIp = (req) =>
-  (req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress || "")
-    .replace("::ffff:", "")
-    .trim() || null;
+// req.ip honours the 'trust proxy' setting, so X-Forwarded-For is only believed
+// from the configured proxy hops instead of from any client
+const clientIp = (req) => {
+  const ip = (req.ip || "").replace(/^::ffff:/, "");
+  return net.isIP(ip) ? ip : null;
+};
 
 /** Session length per role: admins 40 min, normal visitors 30 min. */
 const sessionMinutesFor = (user) =>
@@ -32,21 +37,28 @@ async function startSession(req, res, user) {
  * Every signed-in account gets a backend-tracked session: 40 min for admins,
  * 30 min for normal visitors. The admin panel is still gated by is_admin downstream.
  */
-authRouter.post("/google", async (req, res) => {
-  try {
+authRouter.post(
+  "/google",
+  asyncRoute(async (req, res) => {
     const { credential } = req.body || {};
     if (!credential) return res.status(400).json({ error: "Missing credential" });
 
-    const profile = await verifyGoogleCredential(credential);
+    let profile;
+    try {
+      profile = await verifyGoogleCredential(credential);
+    } catch (err) {
+      console.error("[auth/google]", err.message);
+      // domain restriction (403) has a safe message; token errors stay generic
+      return err.status
+        ? res.status(err.status).json({ error: err.message })
+        : res.status(401).json({ error: "Google sign-in failed" });
+    }
     const user = await upsertUserOnLogin(profile); // tracks every login (count++)
 
     const expiresAt = await startSession(req, res, user);
     res.json({ user: publicUser(user), expiresAt });
-  } catch (err) {
-    console.error("[auth/google]", err.message);
-    res.status(err.status || 401).json({ error: err.message || "Google sign-in failed" });
-  }
-});
+  })
+);
 
 /**
  * POST /api/auth/dev-login { email } — LOCAL ONLY shortcut for testing without
@@ -74,26 +86,28 @@ authRouter.post("/dev-login", async (req, res) => {
 });
 
 /** GET /api/auth/me — current session/user (admin or normal visitor), or { user: null }. */
-authRouter.get("/me", async (req, res) => {
-  const session = readSession(req);
-  if (!session) return res.json({ user: null });
-  const active = await getActiveSession(session.jti);
-  if (!active) return res.json({ user: null });
-  const user = await getUserById(session.uid);
-  if (!user) return res.json({ user: null });
-  res.json({
-    user: publicUser(user),
-    expiresAt: new Date(session.exp * 1000).toISOString(),
-  });
-});
+authRouter.get(
+  "/me",
+  asyncRoute(async (req, res) => {
+    const current = await getSessionUser(req);
+    if (!current) return res.json({ user: null });
+    res.json({
+      user: publicUser(current.user),
+      expiresAt: new Date(current.payload.exp * 1000).toISOString(),
+    });
+  })
+);
 
 /** POST /api/auth/logout — revoke this session server-side + clear cookie. */
-authRouter.post("/logout", async (req, res) => {
-  const session = readSession(req);
-  if (session?.jti) await revokeSession(session.jti);
-  clearSession(res);
-  res.json({ ok: true });
-});
+authRouter.post(
+  "/logout",
+  asyncRoute(async (req, res) => {
+    const session = readSession(req);
+    if (session?.jti) await revokeSession(session.jti);
+    clearSession(res);
+    res.json({ ok: true });
+  })
+);
 
 function publicUser(u) {
   return {

@@ -124,7 +124,7 @@ Fly.io, a VPS…) plus a Postgres database.
 
 1. Provision Postgres, set `DATABASE_URL`, run `npm run db:setup` once.
 2. Set all env vars; `NODE_ENV=production`, `ALLOW_DEV_LOGIN` unset, real `JWT_SECRET`.
-3. Set `CLIENT_ORIGIN` to the deployed frontend origin (for CORS + cookies).
+3. Set `CLIENT_ORIGIN` to the deployed frontend origin(s), comma-separated (CORS, cookies and the CSRF origin check — admin uploads/deletes from any other origin are rejected).
 4. In the frontend, set `VITE_API_BASE` to this backend's URL and rebuild.
 5. Add the production origin to the Google OAuth "Authorized JavaScript origins".
 

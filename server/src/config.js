@@ -2,6 +2,20 @@ import "dotenv/config";
 
 const isProd = process.env.NODE_ENV === "production";
 
+// never run production on the public fallback secret — anyone could forge sessions
+if (isProd && !process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET must be set when NODE_ENV=production");
+}
+
+// Express 'trust proxy' (decides req.ip). Unset = 1 hop in prod (behind a load
+// balancer), loopback in dev (Vite proxy). Accepts a hop count, true/false or IPs.
+function parseTrustProxy(v) {
+  if (v === undefined || v === "") return isProd ? 1 : "loopback";
+  if (/^\d+$/.test(v)) return Number(v);
+  if (v === "true" || v === "false") return v === "true";
+  return v;
+}
+
 export const config = {
   isProd,
   port: Number(process.env.PORT) || 4000,
@@ -9,7 +23,12 @@ export const config = {
     process.env.DATABASE_URL || "postgres://localhost:5432/databeings",
   // SSL: 'true' | 'false' | unset (auto: off for localhost, on for remote)
   dbSsl: process.env.DATABASE_SSL,
-  clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+  // comma-separated list of allowed frontend origins (CORS + CSRF origin check)
+  clientOrigins: (process.env.CLIENT_ORIGIN || "http://localhost:5173")
+    .split(",")
+    .map((o) => o.trim().replace(/\/$/, ""))
+    .filter(Boolean),
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
   jwtSecret: process.env.JWT_SECRET || "dev-insecure-secret-change-me",
   // admin session — hard cap, never more than 40 minutes

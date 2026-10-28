@@ -25,18 +25,25 @@ function slotRank(s: string) {
 }
 const slotLabel = (s: string) => MONTH_LONG[s] ?? s;
 
+/** Rows saved before the backend spelling fix use "news_re" / "x_reprt"; treat them as the same type. */
+const normalizeReportType = (rt?: string) => {
+  if (!rt || rt === "news_re") return "news_report";
+  if (rt === "x_reprt") return "x_report";
+  return rt;
+};
+
 const formatReportTypeLabel = (rt: string) => {
   switch (rt) {
     case "youtube_report":
       return "YouTube";
     case "instagram_report":
       return "Instagram";
-    case "x_reprt":
+    case "x_report":
       return "X";
-    case "news_re":
+    case "news_report":
       return "News";
     default:
-      return rt.replace(/_report$/, "").replace(/_re$/, "").toUpperCase();
+      return rt.replace(/_report$/, "").toUpperCase();
   }
 };
 
@@ -79,7 +86,7 @@ export default function NewsMediaStats() {
       uniq(
         items
           .filter((i) => i.language === lang)
-          .map((i) => i.reportType || "news_re")
+          .map((i) => normalizeReportType(i.reportType))
       ),
     [items, lang]
   );
@@ -91,7 +98,7 @@ export default function NewsMediaStats() {
     () =>
       uniq(
         items
-          .filter((i) => i.language === lang && (i.reportType || "news_re") === reportType)
+          .filter((i) => i.language === lang && normalizeReportType(i.reportType) === reportType)
           .map((i) => i.period)
       ),
     [items, lang, reportType]
@@ -107,7 +114,7 @@ export default function NewsMediaStats() {
           .filter(
             (i) =>
               i.language === lang &&
-              (i.reportType || "news_re") === reportType &&
+              normalizeReportType(i.reportType) === reportType &&
               i.period === period
           )
           .map((i) => i.year)
@@ -123,7 +130,7 @@ export default function NewsMediaStats() {
           .filter(
             (i) =>
               i.language === lang &&
-              (i.reportType || "news_re") === reportType &&
+              normalizeReportType(i.reportType) === reportType &&
               i.period === period &&
               i.year === year
           )
@@ -138,7 +145,7 @@ export default function NewsMediaStats() {
       items.find(
         (i) =>
           i.language === lang &&
-          (i.reportType || "news_re") === reportType &&
+          normalizeReportType(i.reportType) === reportType &&
           i.period === period &&
           i.year === year &&
           i.monthOrWeek === slot
@@ -146,8 +153,10 @@ export default function NewsMediaStats() {
     [items, lang, reportType, period, year, slot]
   );
 
+  // "English News YouTube Monthly Stats"; plain news reports skip the label so it isn't "News News"
+  const typeLabel = reportType === "news_report" ? "" : ` ${formatReportTypeLabel(reportType)}`;
   const title = current
-    ? `${lang} News ${formatReportTypeLabel(reportType)} ${period} Stats — ${slotLabel(slot)} ${year}`
+    ? `${lang} News${typeLabel} ${period} Stats — ${slotLabel(slot)} ${year}`
     : "";
 
   return (
