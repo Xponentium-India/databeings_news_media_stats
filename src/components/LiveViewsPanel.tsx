@@ -135,7 +135,6 @@ export function LiveViewsPanel() {
   }, []);
 
   const maxVal = useMemo(() => Math.max(...channels.map(c => c.val)), [channels]);
-  const total  = useMemo(() => channels.reduce((sum, c) => sum + c.val, 0), [channels]);
 
   return (
     <div style={{
@@ -158,7 +157,7 @@ export function LiveViewsPanel() {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span className="h-2 w-2 rounded-full bg-flame animate-pulse" />
           <span style={{ fontSize: 11, letterSpacing: 2, color: T.flameSoft, fontWeight: 600 }}>
-            LIVE · YOUTUBE VIEWS
+            REAL TIME TRACKING
           </span>
         </div>
         <span style={{ fontSize: 11, color: T.ink3, opacity: 0.8 }}>Million / mo</span>
@@ -211,34 +210,6 @@ export function LiveViewsPanel() {
           </div>
         );
       })}
-
-      {/* Total box */}
-      <div style={{
-        background:   `linear-gradient(135deg, ${T.flameDark}, ${T.flame})`,
-        borderRadius: 10,
-        padding:      "12px 18px",
-        display:      "flex",
-        alignItems:   "center",
-        gap:          14,
-        marginTop:    6,
-      }}>
-        <span style={{
-          fontSize:           32,
-          fontWeight:         800,
-          fontVariantNumeric: "tabular-nums",
-          color:              T.paper,
-        }}>
-          {total.toFixed(1)}M
-        </span>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: T.paper }}>
-            VIEWS TRACKED / MO
-          </div>
-          <div style={{ fontSize: 10, color: T.paper, opacity: 0.65 }}>
-            live sample · updates every 2s
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

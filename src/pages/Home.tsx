@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { ProjectCTA } from "@/components/ProjectCTA";
 import { SubscribeBar } from "@/components/SubscribeBar";
 import { Reveal } from "@/components/Reveal";
-import { Counter } from "@/components/Counter";
 import { IMAGES, SERVICE_COLUMNS } from "@/data/content";
 import { LiveViewsPanel } from "@/components/LiveViewsPanel";
 
@@ -78,31 +77,6 @@ export default function Home() {
           <Reveal delay={200} className="relative flex justify-center md:justify-end">
             <LiveViewsPanel />
           </Reveal>
-        </div>
-
-        {/* stat strip */}
-        <div className="relative border-t border-white/10">
-          <div className="container grid grid-cols-2 divide-x divide-white/10 md:grid-cols-4">
-            {[
-              { v: 509.2, d: 1, s: "M", l: "Monthly views tracked" },
-              { v: 76.4, d: 1, s: "M", l: "Channel subscribers" },
-              { v: 12, d: 0, s: "", l: "News channels ranked" },
-              { v: 3, d: 0, s: "", l: "Core service lines" },
-            ].map((stat, i) => (
-              <Reveal
-                key={stat.l}
-                delay={i * 80}
-                className="px-2 py-7 text-center md:py-9"
-              >
-                <p className="font-display text-3xl font-bold tracking-tight md:text-4xl">
-                  <Counter value={stat.v} decimals={stat.d} suffix={stat.s} />
-                </p>
-                <p className="mt-1.5 font-mono text-[0.62rem] uppercase tracking-wider text-paper/50">
-                  {stat.l}
-                </p>
-              </Reveal>
-            ))}
-          </div>
         </div>
       </section>
 
